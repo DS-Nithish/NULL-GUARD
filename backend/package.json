@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:seed": "tsx src/db/seed.ts",
     "test:gateway": "tsx src/scripts/testGateway.ts",
-    "test:attack": "tsx src/scripts/testAgentAttack.ts"
+    "test:attack": "tsx src/scripts/testAgentAttack.ts",
+    "test:attack-lab": "tsx src/scripts/runAttackLab.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

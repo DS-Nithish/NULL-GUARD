@@ -8,6 +8,7 @@ import provenanceRoutes from "./routes/provenanceRoutes";
 import firewallRoutes from "./routes/firewallRoutes";
 import approvalRoutes from "./routes/approvalRoutes";
 import eventRoutes from "./routes/eventRoutes";
+import attackLabRoutes from "./routes/attackLabRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -21,13 +22,14 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Gateway, Content, Agent, Provenance, Firewall, Approvals, and Events routes
+// Gateway, Content, Agent, Provenance, Firewall, Approvals, Events, and Attack Lab routes
 app.use("/api", gatewayRoutes);
 app.use("/api", agentRoutes);
 app.use("/api/provenance", provenanceRoutes);
 app.use("/api/firewall", firewallRoutes);
 app.use("/api/approvals", approvalRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/attack-lab", attackLabRoutes);
 
 // Centralized error handling
 app.use(errorHandler);

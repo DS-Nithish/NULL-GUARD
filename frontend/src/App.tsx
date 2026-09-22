@@ -12,8 +12,10 @@ function App() {
       <Route element={<Layout />}>
         <Route index element={<OverviewPage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
-        <Route path="attack-lab" element={<AttackLabPage />} />
+        <Route path="dashboard" element={<ApprovalsPage />} />
+        <Route path="dashboard/events" element={<SecurityEventsPage />} />
         <Route path="security-events" element={<SecurityEventsPage />} />
+        <Route path="attack-lab" element={<AttackLabPage />} />
       </Route>
     </Routes>
   );

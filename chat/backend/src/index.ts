@@ -2,54 +2,43 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import fs from "node:fs";
+import path from "node:path";
+import { runAgentLoop } from "./agent/agentLoop";
 import {
-  initDb,
-  createConversation,
-  getConversationById,
-  insertMessage,
-  getMessagesByConversation,
-  insertToolRequest,
+  getChatMessages,
+  getRecentToolRequests,
+  getSecurityEvents,
+  getStats,
   getToolRequestById,
   updateToolRequest,
-  generateId,
-} from "./db";
-import { getAllDocumentsPublic, getDocumentById } from "./services/documents";
-import {
-  executeTool,
-  TOOL_RISK_MAP,
-  isApprovedRecipient,
-  getApprovedRecipients,
-  isGmailLive,
-  initGmailMcpClient,
-  isNeonLive,
-  initNeonMcpClient,
-  logGmailAudit,
-  AUDIT_LOG_FILE,
-} from "./services/gateway";
-import { evaluate } from "./services/firewall";
-import { runAgentReasoning } from "./services/agent";
+  resetStore,
+  addChatMessage,
+} from "./store/memoryStore";
+import { dispatchAuthorizedToolExecution } from "./execution/toolExecution";
+import { generateFixturePdfs } from "./fixtures/generateFixtures";
 
+// Load environment variables
 dotenv.config();
-if (!process.env.GROQ_API_KEY && fs.existsSync("../.env")) {
-  dotenv.config({ path: "../.env" });
+if (!process.env.GROQ_API_KEY && fs.existsSync(path.resolve(__dirname, "../../.env"))) {
+  dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 }
 
 const app = express();
-const PORT = process.env.PORT || 4002;
+const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
 
-// Initialize SQLite schema
-initDb();
+// Ensure fixtures exist on startup
+const fixturesDir = path.resolve(__dirname, "../fixtures");
+const cleanPdfPath = path.join(fixturesDir, "clean-document.pdf");
+const injectedPdfPath = path.join(fixturesDir, "injected-document.pdf");
 
-// Attempt connection to Gmail and Neon MCP if configured
-initGmailMcpClient().catch((err) => {
-  console.warn("Gmail MCP init:", err);
-});
-initNeonMcpClient().catch((err) => {
-  console.warn("Neon MCP init:", err);
-});
+if (!fs.existsSync(cleanPdfPath) || !fs.existsSync(injectedPdfPath)) {
+  generateFixturePdfs(fixturesDir).catch((err) =>
+    console.warn("[STARTUP] Error generating fixtures:", err),
+  );
+}
 
 /**
  * Health check
@@ -57,367 +46,193 @@ initNeonMcpClient().catch((err) => {
 app.get("/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
-    service: "AgentShield Chat Backend",
-    isLiveGmail: isGmailLive(),
-    isLiveNeon: isNeonLive(),
+    service: "AgentShield Self-Contained In-Memory Security Engine",
+    groqApiKeyConfigured: Boolean(process.env.GROQ_API_KEY),
+    stats: getStats(),
   });
-});
-
-/**
- * GET /api/status
- * Returns system live status, Gmail & Neon modes, and approved recipients
- */
-app.get("/api/status", (_req: Request, res: Response) => {
-  res.json({
-    isLiveGmail: isGmailLive(),
-    isLiveNeon: isNeonLive(),
-    approvedRecipients: getApprovedRecipients(),
-    auditLogPath: AUDIT_LOG_FILE,
-  });
-});
-
-/**
- * GET /api/audit-log
- * Returns entries from the dedicated Gmail audit log file
- */
-app.get("/api/audit-log", (_req: Request, res: Response) => {
-  try {
-    if (!fs.existsSync(AUDIT_LOG_FILE)) {
-      res.json({ entries: [] });
-      return;
-    }
-    const content = fs.readFileSync(AUDIT_LOG_FILE, "utf8");
-    const lines = content.trim().split("\n").filter(Boolean);
-    const entries = lines.map((l) => {
-      try {
-        return JSON.parse(l);
-      } catch {
-        return { raw: l };
-      }
-    });
-    res.json({ entries });
-  } catch (err) {
-    console.error("Error reading audit log:", err);
-    res.status(500).json({ error: "Failed to read audit log" });
-  }
-});
-
-/**
- * POST /api/chat/new
- * Creates a new conversation session
- */
-app.post("/api/chat/new", (_req: Request, res: Response) => {
-  try {
-    const convId = generateId("conv");
-    const conversation = createConversation(convId);
-    res.json({ conversationId: conversation.id });
-  } catch (err) {
-    console.error("Error creating conversation:", err);
-    res.status(500).json({ error: "Failed to create conversation" });
-  }
 });
 
 /**
  * GET /api/documents
- * Returns public list of preset documents (zero taint/malicious flags leaked)
+ * Returns the two fixed fixture documents (id, name) for the quick-attach picker.
+ * No visual hint as to which one contains an injection!
  */
 app.get("/api/documents", (_req: Request, res: Response) => {
-  try {
-    const docs = getAllDocumentsPublic();
-    res.json(docs);
-  } catch (err) {
-    console.error("Error fetching documents:", err);
-    res.status(500).json({ error: "Failed to retrieve documents" });
+  res.json([
+    {
+      id: "clean-doc",
+      name: "clean-document.pdf",
+      description: "Quarterly Operations & Infrastructure Review (Q3 2026)",
+      size: "24 KB",
+    },
+    {
+      id: "injected-doc",
+      name: "injected-document.pdf",
+      description: "Quarterly Security & Compliance Audit (Q3 2026)",
+      size: "26 KB",
+    },
+  ]);
+});
+
+/**
+ * GET /api/documents/:id/download
+ * Serves the raw PDF fixture file.
+ */
+app.get("/api/documents/:id/download", (req: Request, res: Response) => {
+  const { id } = req.params;
+  const filePath =
+    id === "injected-doc" || id === "injected-document.pdf" ? injectedPdfPath : cleanPdfPath;
+
+  if (fs.existsSync(filePath)) {
+    res.download(filePath);
+  } else {
+    res.status(404).json({ error: "Document fixture not found" });
   }
 });
 
 /**
- * GET /api/chat/:conversationId/messages
- * Returns full message history for rendering/polling
+ * GET /api/chat/messages
+ * Returns full conversation history for the active session.
  */
-app.get("/api/chat/:conversationId/messages", (req: Request, res: Response): void => {
-  try {
-    const { conversationId } = req.params;
-    const conversation = getConversationById(conversationId);
-    if (!conversation) {
-      res.status(404).json({ error: `Conversation '${conversationId}' not found` });
-      return;
-    }
-    const messages = getMessagesByConversation(conversationId);
-    res.json(messages);
-  } catch (err) {
-    console.error("Error fetching messages:", err);
-    res.status(500).json({ error: "Failed to retrieve conversation messages" });
-  }
+app.get("/api/chat/messages", (_req: Request, res: Response) => {
+  const messages = getChatMessages();
+  res.json({ messages });
 });
 
 /**
  * POST /api/chat/message
- * Handles sending a message to the agent, checking attached documents,
- * and intercepting tool calls via AgentShield firewall.
+ * { message: string, documentId?: string }
+ * Core chat interaction endpoint.
  */
-app.post("/api/chat/message", async (req: Request, res: Response): Promise<void> => {
+app.post("/api/chat/message", async (req: Request, res: Response) => {
+  const { message, documentId } = req.body;
+  if (!message && !documentId) {
+    res.status(400).json({ error: "Message or documentId required" });
+    return;
+  }
+
   try {
-    const { conversationId, message, attachedDocumentId, toolsEnabled } = req.body;
-
-    if (!conversationId || !message) {
-      res.status(400).json({ error: "conversationId and message are required" });
-      return;
-    }
-
-    console.log(
-      `[CHAT] Message received. conversationId=${conversationId} toolsEnabled=${JSON.stringify(
-        toolsEnabled || { neonDatabase: true },
-      )}`,
-    );
-
-    // 1. Store User Message
-    const userMsgId = generateId("msg");
-    insertMessage({
-      id: userMsgId,
-      conversation_id: conversationId,
-      role: "user",
-      content: message,
+    const result = await runAgentLoop({
+      message: message || "Please analyze this document and summarize its findings.",
+      documentId,
     });
 
-    // 2. Resolve document context if attached
-    const attachedDoc = attachedDocumentId ? getDocumentById(attachedDocumentId) : null;
-    const source_type = attachedDoc ? "PDF" : "USER";
-    const trust_level = attachedDoc ? "UNTRUSTED" : "TRUSTED";
-
-    // 3. Run Agent Reasoning (Groq SDK or deterministic simulation with conditional tool list)
-    const agentResult = await runAgentReasoning(message, attachedDoc, toolsEnabled);
-
-    // 4. Handle proposed tool call or plain text
-    if (agentResult.proposedToolCall) {
-      const { toolName, arguments: toolArgs } = agentResult.proposedToolCall;
-      const risk_level = TOOL_RISK_MAP[toolName] || "HIGH";
-
-      // Taint Detection:
-      let tainted = false;
-
-      if (attachedDoc && attachedDoc.isMalicious) {
-        tainted = true;
-      } else if (toolName === "send_email") {
-        const proposedTo = String(toolArgs.to || "").toLowerCase();
-        const userMsgLower = message.toLowerCase();
-        const isRecipientInUserPrompt = proposedTo && userMsgLower.includes(proposedTo);
-        const isRecipientApproved = isApprovedRecipient(proposedTo);
-
-        if (proposedTo.includes("attacker") || (!isRecipientInUserPrompt && !isRecipientApproved)) {
-          tainted = true;
-        } else if (attachedDoc && !isRecipientApproved) {
-          tainted = true;
-        }
-      } else if (toolName === "insert_document_summary") {
-        const titleStr = String(toolArgs.title || "");
-        const summaryStr = String(toolArgs.summary || "");
-        if (
-          attachedDoc?.isMalicious ||
-          titleStr.includes("ATTACKER") ||
-          titleStr.includes("EXPLOIT") ||
-          summaryStr.includes("backdoor") ||
-          summaryStr.includes("privileges granted")
-        ) {
-          tainted = true;
-        }
-      }
-
-      // Evaluate through AgentShield Firewall
-      const firewallDecision = evaluate({
-        trustLevel: trust_level,
-        tainted,
-        riskLevel: risk_level,
-      });
-
-      // Tailor plain-English reason for security context
-      if (toolName === "send_email" && firewallDecision.decision === "BLOCK") {
-        firewallDecision.reason =
-          "Blocked: this email would have been sent to an unauthorized recipient based on hidden instructions found in the attached content.";
-
-        // Log block to dedicated audit trail
-        logGmailAudit({
-          event: "BLOCKED",
-          tool: "send_email",
-          to: String(toolArgs.to || "unspecified"),
-          subject: String(toolArgs.subject || "unspecified"),
-          decision: "BLOCK",
-          reason: firewallDecision.reason,
-          details: { toolArgs, attachedDocId: attachedDoc?.id, toolsEnabled },
-        });
-      } else if (toolName === "insert_document_summary" && firewallDecision.decision === "BLOCK") {
-        firewallDecision.reason =
-          "Blocked: this database write was requested based on instructions found inside an untrusted document, not from you directly.";
-      }
-
-      const toolRequestId = generateId("req");
-      const status = firewallDecision.decision === "CONFIRM" ? "pending" : "resolved";
-
-      let executionResult = null;
-      // Gateway Execution: Invariant - ONLY called if decision is ALLOW
-      if (firewallDecision.decision === "ALLOW") {
-        executionResult = await executeTool(toolName, toolArgs);
-      }
-
-      // Record tool request in SQLite
-      insertToolRequest({
-        id: toolRequestId,
-        conversation_id: conversationId,
-        tool_name: toolName,
-        arguments: toolArgs,
-        source_type,
-        trust_level,
-        tainted,
-        risk_level,
-        decision: firewallDecision.decision,
-        reason: firewallDecision.reason,
-        status,
-        execution_result: executionResult as unknown as Record<string, unknown>,
-      });
-
-      // Insert agent message associated with this tool event card
-      const agentMsgId = generateId("msg");
-      insertMessage({
-        id: agentMsgId,
-        conversation_id: conversationId,
-        role: "agent",
-        content: agentResult.responseText || "Evaluating requested tool execution with AgentShield...",
-        tool_request_id: toolRequestId,
-      });
-    } else {
-      // Plain text agent response
-      const agentMsgId = generateId("msg");
-      insertMessage({
-        id: agentMsgId,
-        conversation_id: conversationId,
-        role: "agent",
-        content: agentResult.responseText,
-      });
-    }
-
-    // Return the updated full message list
-    const messages = getMessagesByConversation(conversationId);
-    res.json(messages);
-  } catch (err) {
-    console.error("Error processing chat message:", err);
-    res.status(500).json({ error: "Failed to process chat message" });
+    const messages = getChatMessages();
+    res.json({
+      success: true,
+      messages,
+      lastAgentMessage: result.agentMessage,
+      firewallResult: result.firewallResult,
+    });
+  } catch (err: any) {
+    console.error("[CHAT API ERROR]", err);
+    res.status(500).json({ error: err.message || "Failed to process message" });
   }
 });
 
 /**
- * POST /api/chat/approve/:toolRequestId
- * Operator approves a pending CONFIRM tool call -> executes tool via Gateway.
+ * POST /api/chat/approve/:requestId
+ * Operator approves a pending CONFIRM tool call -> executes tool via isolated executor.
  */
-app.post("/api/chat/approve/:toolRequestId", async (req: Request, res: Response): Promise<void> => {
+app.post("/api/chat/approve/:requestId", async (req: Request, res: Response) => {
+  const { requestId } = req.params;
+  const record = getToolRequestById(requestId);
+
+  if (!record) {
+    res.status(404).json({ error: `Tool request ${requestId} not found` });
+    return;
+  }
+
+  if (record.decision === "BLOCK") {
+    res.status(403).json({ error: "Cannot approve a BLOCKED request" });
+    return;
+  }
+
   try {
-    const { toolRequestId } = req.params;
-    const toolReq = getToolRequestById(toolRequestId);
+    // Mark record as resolved before execution
+    updateToolRequest(requestId, { status: "resolved" });
+    const execResult = await dispatchAuthorizedToolExecution(requestId);
 
-    if (!toolReq) {
-      res.status(404).json({ error: `Tool request '${toolRequestId}' not found` });
-      return;
-    }
-
-    if (toolReq.status !== "pending" || toolReq.decision !== "CONFIRM") {
-      res.status(400).json({
-        error: `Cannot approve request with decision '${toolReq.decision}' and status '${toolReq.status}'`,
-      });
-      return;
-    }
-
-    const args = JSON.parse(toolReq.arguments);
-
-    // CRITICAL: Authorized call to Tool Gateway
-    const executionResult = await executeTool(toolReq.tool_name, args);
-
-    // Update state to ALLOW
-    updateToolRequest(toolRequestId, {
-      decision: "ALLOW",
-      status: "resolved",
-      execution_result: executionResult as unknown as Record<string, unknown>,
-    });
-
-    // Append resolution message to chat thread
-    const resMsgId = generateId("msg");
-    const executionMsg =
-      toolReq.tool_name === "send_email"
-        ? `Email sent to ${args.to} (Message ID: ${executionResult.output?.messageId || "delivered"})`
-        : toolReq.tool_name === "insert_document_summary"
-        ? `Summary saved to Neon Database table 'document_summaries' (Row ID: ${executionResult.output?.rowId || "saved"})`
-        : `Tool '${toolReq.tool_name}' was approved and executed successfully via the Tool Gateway.`;
-
-    insertMessage({
-      id: resMsgId,
-      conversation_id: toolReq.conversation_id,
+    addChatMessage({
+      id: `msg_${Date.now()}_approve`,
       role: "agent",
-      content: executionMsg,
+      content: `Tool '${record.tool_name}' was approved and executed successfully.\n\n${execResult.message}`,
+      created_at: new Date().toISOString(),
     });
 
-    const messages = getMessagesByConversation(toolReq.conversation_id);
+    const messages = getChatMessages();
     res.json({
       success: true,
-      executionResult,
+      executionResult: execResult,
       messages,
     });
-  } catch (err) {
-    console.error("Error approving tool request:", err);
-    res.status(500).json({ error: "Failed to approve tool request" });
+  } catch (err: any) {
+    console.error("[APPROVE ERROR]", err);
+    res.status(500).json({ error: err.message || "Failed to approve tool request" });
   }
 });
 
 /**
- * POST /api/chat/deny/:toolRequestId
- * Operator denies a pending CONFIRM tool call -> marked BLOCK, Gateway NEVER called.
+ * POST /api/chat/deny/:requestId
+ * Operator denies a pending CONFIRM tool call.
  */
-app.post("/api/chat/deny/:toolRequestId", (req: Request, res: Response): void => {
-  try {
-    const { toolRequestId } = req.params;
-    const toolReq = getToolRequestById(toolRequestId);
+app.post("/api/chat/deny/:requestId", (req: Request, res: Response) => {
+  const { requestId } = req.params;
+  const record = getToolRequestById(requestId);
 
-    if (!toolReq) {
-      res.status(404).json({ error: `Tool request '${toolRequestId}' not found` });
-      return;
-    }
-
-    updateToolRequest(toolRequestId, {
-      decision: "BLOCK",
-      status: "resolved",
-    });
-
-    if (toolReq.tool_name === "send_email") {
-      const args = JSON.parse(toolReq.arguments);
-      logGmailAudit({
-        event: "BLOCKED",
-        tool: "send_email",
-        to: args.to,
-        decision: "BLOCK",
-        reason: "Denied by human operator before execution",
-      });
-    }
-
-    const resMsgId = generateId("msg");
-    insertMessage({
-      id: resMsgId,
-      conversation_id: toolReq.conversation_id,
-      role: "agent",
-      content: `Tool '${toolReq.tool_name}' execution was denied by operator.`,
-    });
-
-    const messages = getMessagesByConversation(toolReq.conversation_id);
-    res.json({
-      success: true,
-      messages,
-    });
-  } catch (err) {
-    console.error("Error denying tool request:", err);
-    res.status(500).json({ error: "Failed to deny tool request" });
+  if (!record) {
+    res.status(404).json({ error: `Tool request ${requestId} not found` });
+    return;
   }
+
+  updateToolRequest(requestId, { status: "denied" });
+
+  addChatMessage({
+    id: `msg_${Date.now()}_deny`,
+    role: "agent",
+    content: `Tool '${record.tool_name}' execution was denied by operator.`,
+    created_at: new Date().toISOString(),
+  });
+
+  const messages = getChatMessages();
+  res.json({
+    success: true,
+    messages,
+  });
 });
 
-if (!process.env.VITEST) {
+/**
+ * GET /api/dashboard
+ * Live dashboard endpoint showing stats, recent requests, and security events.
+ */
+app.get("/api/dashboard", (_req: Request, res: Response) => {
+  res.json({
+    stats: getStats(),
+    recentRequests: getRecentToolRequests(15),
+    recentEvents: getSecurityEvents(20),
+  });
+});
+
+/**
+ * POST /api/chat/reset or POST /api/chat/new
+ * Resets the in-memory state for a clean demo run.
+ */
+app.post(["/api/chat/reset", "/api/chat/new"], (_req: Request, res: Response) => {
+  resetStore();
+  res.json({
+    success: true,
+    message: "In-memory session reset successfully.",
+    messages: [],
+    stats: getStats(),
+  });
+});
+
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
   app.listen(PORT, () => {
-    console.log(`AgentShield Chat Backend running on http://localhost:${PORT}`);
-    console.log(`[CONFIG] Groq API Key: ${process.env.GROQ_API_KEY ? "Present" : "Missing"}, Model: ${process.env.GROQ_MODEL || "openai/gpt-oss-120b"}, Simulated: ${process.env.SIMULATED_MODE === "true" || !process.env.GROQ_API_KEY}`);
+    console.log(`AgentShield In-Memory Backend running on http://localhost:${PORT}`);
+    console.log(`[FIREWALL] Active middleware: firewallMiddleware`);
+    console.log(`[STORAGE] 100% in-memory store (no database, no ORM, no external dependencies)`);
+    console.log(`[GROQ] API Key: ${process.env.GROQ_API_KEY ? "Configured" : "Simulated Fallback Mode"}`);
   });
 }
 

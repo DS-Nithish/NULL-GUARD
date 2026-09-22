@@ -70,6 +70,11 @@ function mapSecurityEventRow(row: RawSecurityEventRow): SecurityEvent {
     reason: row.reason || reasoning,
     metadata: safeParseJson<Record<string, unknown> | null>(row.metadata, null),
     created_at: row.created_at,
+    tool_name: toolName,
+    arguments: args,
+    tainted: Boolean(taint?.tainted),
+    risk_level: risk?.risk || "LOW",
+    matched_rule: matchedRule,
   };
 }
 

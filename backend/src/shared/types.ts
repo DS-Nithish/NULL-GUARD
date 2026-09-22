@@ -87,6 +87,11 @@ export interface SecurityEvent {
   reason?: string;
   metadata?: Record<string, unknown> | null;
   created_at?: string;
+  tool_name?: string;
+  arguments?: Record<string, any>;
+  tainted?: boolean;
+  risk_level?: string;
+  matched_rule?: string;
 }
 
 // ── Raw SQLite row representations (internal to repository layer) ──

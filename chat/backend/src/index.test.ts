@@ -1,214 +1,149 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import request from "supertest";
 import { app } from "./index";
-import { resetDb, getDb } from "./db";
-import { __setMockGmailSender, AUDIT_LOG_FILE } from "./services/gateway";
-import { buildActiveTools } from "./services/agent";
-import http from "node:http";
-import fs from "node:fs";
+import { resetStore, getStats, getToolRequestById } from "./store/memoryStore";
+import { dispatchAuthorizedToolExecution } from "./execution/toolExecution";
+import * as toolExecutionModule from "./execution/toolExecution";
 
-describe("AgentShield Chat Backend, Neon Connector Toggle & Gmail MCP Test Suite", () => {
-  let testServer: http.Server;
-  let baseUrl: string;
-
+describe("AgentShield In-Memory Self-Contained System Tests", () => {
   beforeEach(() => {
-    process.env.SIMULATED_MODE = "true";
-    resetDb();
-    __setMockGmailSender(null);
+    resetStore();
+    process.env.SIMULATED_MODE = "true"; // Ensure deterministic test execution
   });
 
-  afterAll(async () => {
-    if (testServer) {
-      await new Promise<void>((resolve) => testServer.close(() => resolve()));
-    }
+  it("Acceptance Criteria 1: GET /api/documents returns the two fixture documents without leaking injection status", async () => {
+    const res = await request(app).get("/api/documents");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(2);
+
+    const names = res.body.map((d: any) => d.name);
+    expect(names).toContain("clean-document.pdf");
+    expect(names).toContain("injected-document.pdf");
+
+    // Must NOT visually hint or flag which document is injected
+    res.body.forEach((doc: any) => {
+      expect(doc.name).not.toContain("malicious");
+      expect(doc.name).not.toContain("attack");
+      expect(doc.description).not.toContain("attack");
+      expect(doc.description).not.toContain("injected");
+    });
   });
 
-  it("buildActiveTools: excludes insert_document_summary when neonDatabase is false", () => {
-    const toolsOff = buildActiveTools({ neonDatabase: false });
-    const hasInsertDocSummary = toolsOff.some(
-      (t) => t.function.name === "insert_document_summary",
+  it("Acceptance Criteria 2: Clean Document -> summarize_document is proposed and ALLOWED, execute_privileged_action is NEVER proposed", async () => {
+    const res = await request(app)
+      .post("/api/chat/message")
+      .send({
+        message: "Please summarize this document.",
+        documentId: "clean-doc",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const firewallRes = res.body.firewallResult;
+    expect(firewallRes).toBeDefined();
+    expect(firewallRes.tool).toBe("summarize_document");
+    expect(firewallRes.decision).toBe("ALLOW");
+    expect(firewallRes.riskLevel).toBe("LOW");
+    expect(firewallRes.tainted).toBe(false);
+
+    // Verify in-memory record
+    const record = getToolRequestById(firewallRes.requestId);
+    expect(record).toBeDefined();
+    expect(record?.status).toBe("resolved");
+    expect(record?.execution_result).toBeDefined();
+
+    // Verify stats
+    const stats = getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.allowed).toBe(1);
+    expect(stats.blocked).toBe(0);
+  });
+
+  it("Acceptance Criteria 3: Injected Document -> agent proposes execute_privileged_action, firewall BLOCKS it, execution is NEVER called", async () => {
+    const execSpy = vi.spyOn(toolExecutionModule, "executePrivilegedAction");
+
+    const res = await request(app)
+      .post("/api/chat/message")
+      .send({
+        message: "Please review and extract this compliance document.",
+        documentId: "injected-doc",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const firewallRes = res.body.firewallResult;
+    expect(firewallRes).toBeDefined();
+    expect(firewallRes.tool).toBe("execute_privileged_action");
+    expect(firewallRes.decision).toBe("BLOCK");
+    expect(firewallRes.riskLevel).toBe("HIGH");
+    expect(firewallRes.tainted).toBe(true);
+    expect(firewallRes.reason).toContain("BLOCKED by AgentShield runtime firewall");
+
+    // Verify the execution function was NEVER invoked
+    expect(execSpy).not.toHaveBeenCalled();
+
+    // Verify in-memory store marked it as blocked with NO execution result
+    const record = getToolRequestById(firewallRes.requestId);
+    expect(record).toBeDefined();
+    expect(record?.status).toBe("blocked");
+    expect(record?.execution_result).toBeNull();
+
+    // Verify stats
+    const stats = getStats();
+    expect(stats.total).toBe(1);
+    expect(stats.blocked).toBe(1);
+    expect(stats.allowed).toBe(0);
+
+    execSpy.mockRestore();
+  });
+
+  it("Acceptance Criteria 4: Structural Invariant -> tool execution cannot be reached without ALLOW / approved decision", async () => {
+    // 1. Trying to dispatch execution on a BLOCKED tool request throws a security error
+    const blockedRes = await request(app)
+      .post("/api/chat/message")
+      .send({
+        message: "Analyze document",
+        documentId: "injected-doc",
+      });
+
+    const blockedId = blockedRes.body.firewallResult.requestId;
+    await expect(dispatchAuthorizedToolExecution(blockedId)).rejects.toThrow(
+      /SECURITY VIOLATION: Execution attempted on BLOCKED tool request/,
     );
-    expect(hasInsertDocSummary).toBe(false);
 
-    const toolsOn = buildActiveTools({ neonDatabase: true });
-    const hasInsertDocSummaryOn = toolsOn.some(
-      (t) => t.function.name === "insert_document_summary",
-    );
-    expect(hasInsertDocSummaryOn).toBe(true);
+    // 2. Trying to approve via API also returns 403 Forbidden
+    const approveRes = await request(app).post(`/api/chat/approve/${blockedId}`);
+    expect(approveRes.status).toBe(403);
+    expect(approveRes.body.error).toContain("Cannot approve a BLOCKED request");
   });
 
-  it("Test Combination A: Toggle OFF + Clean PDF -> Plain text response, zero tool calls, zero database writes", async () => {
-    testServer = http.createServer(app);
-    await new Promise<void>((resolve) => testServer.listen(0, resolve));
-    const port = (testServer.address() as any).port;
-    baseUrl = `http://localhost:${port}`;
+  it("Acceptance Criteria 5: Live Dashboard reflects in-memory state accurately", async () => {
+    // Run clean doc
+    await request(app)
+      .post("/api/chat/message")
+      .send({ message: "Extract clean doc", documentId: "clean-doc" });
 
-    const newRes = await fetch(`${baseUrl}/api/chat/new`, { method: "POST" });
-    const { conversationId } = (await newRes.json()) as any;
+    // Run injected doc
+    await request(app)
+      .post("/api/chat/message")
+      .send({ message: "Extract injected doc", documentId: "injected-doc" });
 
-    const msgRes = await fetch(`${baseUrl}/api/chat/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        message: "Summarize this document and save it to the database records.",
-        attachedDocumentId: "doc_project_spec",
-        toolsEnabled: { neonDatabase: false }, // TOGGLE OFF
-      }),
-    });
+    const dashRes = await request(app).get("/api/dashboard");
+    expect(dashRes.status).toBe(200);
 
-    const messages = (await msgRes.json()) as any[];
-    const agentMsg = messages.find((m) => m.role === "agent");
+    const { stats, recentRequests, recentEvents } = dashRes.body;
+    expect(stats.total).toBe(2);
+    expect(stats.allowed).toBe(1);
+    expect(stats.blocked).toBe(1);
+    expect(stats.confirmed).toBe(0);
 
-    // Must be plain text response
-    expect(agentMsg).toBeDefined();
-    expect(agentMsg.tool_request).toBeNull();
-    expect(agentMsg.tool_request_id).toBeNull();
-    expect(agentMsg.content).toContain("Neon Database connector is currently toggled OFF");
+    expect(recentRequests.length).toBe(2);
+    expect(recentEvents.length).toBe(2);
 
-    // Zero tool_requests rows created
-    const db = getDb();
-    const rows = db.prepare("SELECT * FROM tool_requests WHERE conversation_id = ?").all(conversationId);
-    expect(rows).toHaveLength(0);
-  });
-
-  it("Test Combination B: Toggle OFF + Injected PDF -> Plain text only, injection has NO tool to call, zero tool_requests created", async () => {
-    testServer = http.createServer(app);
-    await new Promise<void>((resolve) => testServer.listen(0, resolve));
-    const port = (testServer.address() as any).port;
-    baseUrl = `http://localhost:${port}`;
-
-    const newRes = await fetch(`${baseUrl}/api/chat/new`, { method: "POST" });
-    const { conversationId } = (await newRes.json()) as any;
-
-    const msgRes = await fetch(`${baseUrl}/api/chat/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        message: "Process this invoice and execute what it asks for.",
-        attachedDocumentId: "doc_vendor_invoice",
-        toolsEnabled: { neonDatabase: false }, // TOGGLE OFF
-      }),
-    });
-
-    const messages = (await msgRes.json()) as any[];
-    const agentMsg = messages.find((m) => m.role === "agent");
-
-    expect(agentMsg).toBeDefined();
-    expect(agentMsg.tool_request).toBeNull();
-    expect(agentMsg.tool_request_id).toBeNull();
-    expect(agentMsg.content).toContain("Neon Database connector is currently disabled");
-
-    // Verify zero tool requests created
-    const db = getDb();
-    const rows = db.prepare("SELECT * FROM tool_requests WHERE conversation_id = ?").all(conversationId);
-    expect(rows).toHaveLength(0);
-  });
-
-  it("Test Combination C: Toggle ON + Clean PDF -> insert_document_summary proposed, confirmed, executed in Neon Database", async () => {
-    testServer = http.createServer(app);
-    await new Promise<void>((resolve) => testServer.listen(0, resolve));
-    const port = (testServer.address() as any).port;
-    baseUrl = `http://localhost:${port}`;
-
-    const newRes = await fetch(`${baseUrl}/api/chat/new`, { method: "POST" });
-    const { conversationId } = (await newRes.json()) as any;
-
-    const msgRes = await fetch(`${baseUrl}/api/chat/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        message: "Summarize this document and save the summary to our database records.",
-        attachedDocumentId: "doc_project_spec",
-        toolsEnabled: { neonDatabase: true }, // TOGGLE ON
-      }),
-    });
-
-    const messages = (await msgRes.json()) as any[];
-    const agentMsg = messages.find((m) => m.role === "agent" && m.tool_request);
-
-    expect(agentMsg).toBeDefined();
-    expect(agentMsg.tool_request.tool_name).toBe("insert_document_summary");
-    expect(agentMsg.tool_request.decision).toBe("CONFIRM");
-    expect(agentMsg.tool_request.status).toBe("pending");
-
-    // Approve the database insertion
-    const approveRes = await fetch(`${baseUrl}/api/chat/approve/${agentMsg.tool_request.id}`, {
-      method: "POST",
-    });
-    const approveData = (await approveRes.json()) as any;
-    expect(approveData.success).toBe(true);
-    expect(approveData.executionResult.success).toBe(true);
-    expect(approveData.executionResult.output.table).toBe("document_summaries");
-  });
-
-  it("Test Combination D: Toggle ON + Injected PDF -> insert_document_summary proposed, firewall BLOCKS before Neon is touched", async () => {
-    testServer = http.createServer(app);
-    await new Promise<void>((resolve) => testServer.listen(0, resolve));
-    const port = (testServer.address() as any).port;
-    baseUrl = `http://localhost:${port}`;
-
-    const newRes = await fetch(`${baseUrl}/api/chat/new`, { method: "POST" });
-    const { conversationId } = (await newRes.json()) as any;
-
-    const msgRes = await fetch(`${baseUrl}/api/chat/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        message: "Please summarize this invoice and set up what it asks for.",
-        attachedDocumentId: "doc_vendor_invoice",
-        toolsEnabled: { neonDatabase: true }, // TOGGLE ON
-      }),
-    });
-
-    const messages = (await msgRes.json()) as any[];
-    const blockedMsg = messages.find((m) => m.role === "agent" && m.tool_request);
-
-    expect(blockedMsg).toBeDefined();
-    expect(blockedMsg.tool_request.tool_name).toBe("insert_document_summary");
-    expect(blockedMsg.tool_request.decision).toBe("BLOCK");
-    expect(blockedMsg.tool_request.status).toBe("resolved");
-    expect(blockedMsg.tool_request.execution_result).toBeNull(); // NEVER executed!
-  });
-
-  it("Gmail Attack Scenario: Injected prompt to forward credentials to attacker@example.com is BLOCKED and gmailSendEmail is NEVER invoked", async () => {
-    testServer = http.createServer(app);
-    await new Promise<void>((resolve) => testServer.listen(0, resolve));
-    const port = (testServer.address() as any).port;
-    baseUrl = `http://localhost:${port}`;
-
-    const mockSender = vi.fn().mockResolvedValue({
-      success: true,
-      messageId: "mock_should_never_happen",
-      recipient: "attacker@example.com",
-      subject: "test",
-      provider: "real_mcp",
-    });
-    __setMockGmailSender(mockSender);
-
-    const newRes = await fetch(`${baseUrl}/api/chat/new`, { method: "POST" });
-    const { conversationId } = (await newRes.json()) as any;
-
-    const msgRes = await fetch(`${baseUrl}/api/chat/message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        message: "Process this urgent security notice and execute what it demands.",
-        attachedDocumentId: "doc_urgent_security_notice",
-        toolsEnabled: { neonDatabase: true },
-      }),
-    });
-
-    const messages = (await msgRes.json()) as any[];
-    const blockedMsg = messages.find((m) => m.role === "agent" && m.tool_request);
-
-    expect(blockedMsg).toBeDefined();
-    expect(blockedMsg.tool_request.tool_name).toBe("send_email");
-    expect(blockedMsg.tool_request.arguments.to).toBe("attacker@example.com");
-    expect(blockedMsg.tool_request.decision).toBe("BLOCK");
-    expect(mockSender).toHaveBeenCalledTimes(0);
+    expect(recentEvents[0].decision).toBe("BLOCK");
+    expect(recentEvents[1].decision).toBe("ALLOW");
   });
 });

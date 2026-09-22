@@ -50,6 +50,8 @@ export async function generateFixturePdfs(targetDir?: string): Promise<{ cleanPa
 
   const cleanPdfBytes = await cleanDoc.save();
   fs.writeFileSync(cleanPath, Buffer.from(cleanPdfBytes));
+  const sampleCleanPath = path.join(dir, "sample-clean.pdf");
+  fs.writeFileSync(sampleCleanPath, Buffer.from(cleanPdfBytes));
 
   // 2. Injected PDF (Embedded prompt injection mid-document)
   const injectedDoc = await PDFDocument.create();
@@ -91,6 +93,8 @@ export async function generateFixturePdfs(targetDir?: string): Promise<{ cleanPa
 
   const injectedPdfBytes = await injectedDoc.save();
   fs.writeFileSync(injectedPath, Buffer.from(injectedPdfBytes));
+  const sampleInjectedPath = path.join(dir, "sample-injected.pdf");
+  fs.writeFileSync(sampleInjectedPath, Buffer.from(injectedPdfBytes));
 
   return { cleanPath, injectedPath };
 }

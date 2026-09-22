@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
+import fs from "node:fs";
+import path from "node:path";
 import { app } from "./index";
 import { resetStore, getStats, getToolRequestById } from "./store/memoryStore";
 import { dispatchAuthorizedToolExecution } from "./execution/toolExecution";
@@ -146,4 +148,46 @@ describe("AgentShield In-Memory Self-Contained System Tests", () => {
     expect(recentEvents[0].decision).toBe("BLOCK");
     expect(recentEvents[1].decision).toBe("ALLOW");
   });
+
+  it("Acceptance Criteria 6: Custom PDF Upload -> Clean uploaded document is parsed and safely ALLOWED", async () => {
+    const cleanPath = path.resolve(__dirname, "../fixtures/clean-document.pdf");
+    const testPdfBase64 = fs.readFileSync(cleanPath).toString("base64");
+
+    const uploadRes = await request(app)
+      .post("/api/documents/upload")
+      .send({ name: "custom-quarterly-report.pdf", base64: testPdfBase64 });
+
+    expect(uploadRes.status).toBe(201);
+    expect(uploadRes.body.success).toBe(true);
+    expect(uploadRes.body.document.id).toContain("doc_upload_");
+
+    const chatRes = await request(app)
+      .post("/api/chat/message")
+      .send({ message: "Summarize this uploaded report", documentId: uploadRes.body.document.id });
+
+    expect(chatRes.status).toBe(200);
+    expect(chatRes.body.firewallResult.decision).toBe("ALLOW");
+    expect(chatRes.body.firewallResult.tool).toBe("summarize_document");
+  });
+
+  it("Acceptance Criteria 7: Custom PDF Upload -> Prompt-injected uploaded document is BLOCKED by firewall", async () => {
+    const injectedPath = path.resolve(__dirname, "../fixtures/injected-document.pdf");
+    const testPdfBase64 = fs.readFileSync(injectedPath).toString("base64");
+
+    const uploadRes = await request(app)
+      .post("/api/documents/upload")
+      .send({ name: "custom-injected-audit.pdf", base64: testPdfBase64 });
+
+    expect(uploadRes.status).toBe(201);
+
+    const chatRes = await request(app)
+      .post("/api/chat/message")
+      .send({ message: "Analyze this audit document", documentId: uploadRes.body.document.id });
+
+    expect(chatRes.status).toBe(200);
+    expect(chatRes.body.firewallResult.decision).toBe("BLOCK");
+    expect(chatRes.body.firewallResult.tool).toBe("execute_privileged_action");
+    expect(chatRes.body.firewallResult.tainted).toBe(true);
+  });
 });
+

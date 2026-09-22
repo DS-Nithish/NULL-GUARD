@@ -17,10 +17,56 @@ export const toolImplementations: Record<string, ToolImplementation> = {
       throw new Error("Missing required string argument: 'query'");
     }
     console.log(`[GATEWAY EXECUTED] search_web(query="${args.query}")`);
+
+    const apiKey = process.env.TAVILY_API_KEY || "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";
+    if (process.env.NODE_ENV !== "test" && apiKey) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const resp = await fetch("https://api.tavily.com/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            api_key: apiKey,
+            query: args.query,
+            max_results: 5,
+            search_depth: "basic",
+            include_answer: true,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (resp.ok) {
+          const data = (await resp.json()) as {
+            query?: string;
+            answer?: string;
+            results?: Array<{ title?: string; url?: string; content?: string }>;
+          };
+          return {
+            success: true,
+            output: {
+              query: data.query || args.query,
+              answer: data.answer || null,
+              provider: "tavily_api",
+              results: (data.results || []).map((r) => ({
+                title: r.title || "Web Result",
+                url: r.url || "",
+                snippet: r.content || "",
+              })),
+            },
+          };
+        }
+      } catch (err) {
+        console.warn("[GATEWAY] Tavily search fallback due to network/timeout:", err);
+      }
+    }
+
     return {
       success: true,
       output: {
         query: args.query,
+        provider: "simulated_gateway",
         results: [
           {
             title: `Simulated result for: ${args.query}`,

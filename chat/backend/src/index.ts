@@ -13,9 +13,13 @@ import {
   updateToolRequest,
   resetStore,
   addChatMessage,
+  saveUploadedDocument,
+  getUploadedDocument,
+  getAllUploadedDocuments,
 } from "./store/memoryStore";
 import { dispatchAuthorizedToolExecution } from "./execution/toolExecution";
 import { generateFixturePdfs } from "./fixtures/generateFixtures";
+import { extractDocument } from "./tools/extraction";
 
 // Load environment variables
 dotenv.config();
@@ -27,14 +31,17 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
 // Ensure fixtures exist on startup
 const fixturesDir = path.resolve(__dirname, "../fixtures");
 const cleanPdfPath = path.join(fixturesDir, "clean-document.pdf");
 const injectedPdfPath = path.join(fixturesDir, "injected-document.pdf");
+const sampleCleanPath = path.join(fixturesDir, "sample-clean.pdf");
+const sampleInjectedPath = path.join(fixturesDir, "sample-injected.pdf");
 
-if (!fs.existsSync(cleanPdfPath) || !fs.existsSync(injectedPdfPath)) {
+if (!fs.existsSync(cleanPdfPath) || !fs.existsSync(injectedPdfPath) || !fs.existsSync(sampleCleanPath) || !fs.existsSync(sampleInjectedPath)) {
   generateFixturePdfs(fixturesDir).catch((err) =>
     console.warn("[STARTUP] Error generating fixtures:", err),
   );
@@ -54,10 +61,18 @@ app.get("/health", (_req: Request, res: Response) => {
 
 /**
  * GET /api/documents
- * Returns the two fixed fixture documents (id, name) for the quick-attach picker.
- * No visual hint as to which one contains an injection!
+ * Returns the fixture documents (without leaking injection status) plus any
+ * uploaded custom documents.
  */
 app.get("/api/documents", (_req: Request, res: Response) => {
+  const customDocs = getAllUploadedDocuments().map((d) => ({
+    id: d.id,
+    name: d.name,
+    description: "Custom User Uploaded PDF",
+    size: d.size,
+    uploaded: true,
+  }));
+
   res.json([
     {
       id: "clean-doc",
@@ -71,20 +86,122 @@ app.get("/api/documents", (_req: Request, res: Response) => {
       description: "Quarterly Security & Compliance Audit (Q3 2026)",
       size: "26 KB",
     },
+    ...customDocs,
   ]);
 });
 
 /**
+ * GET /api/documents/samples
+ * Returns the test sample documents available for download.
+ */
+app.get("/api/documents/samples", (_req: Request, res: Response) => {
+  res.json([
+    {
+      id: "sample-clean",
+      name: "sample-clean.pdf",
+      description: "Sample Clean PDF — Quarterly Operations Review (Safe)",
+      size: "24 KB",
+      downloadUrl: "/api/documents/sample-clean.pdf/download",
+    },
+    {
+      id: "sample-injected",
+      name: "sample-injected.pdf",
+      description: "Sample Injected PDF — Security Audit with Prompt Injection",
+      size: "26 KB",
+      downloadUrl: "/api/documents/sample-injected.pdf/download",
+    },
+  ]);
+});
+
+/**
+ * POST /api/documents/upload
+ * Accepts a PDF file via base64 JSON payload: { name: string, base64: string }
+ * Extracts text immediately to validate and caches for the agent loop.
+ */
+app.post("/api/documents/upload", async (req: Request, res: Response) => {
+  const { name, base64 } = req.body;
+  if (!name || !base64) {
+    res.status(400).json({ error: "Missing document 'name' or 'base64' payload" });
+    return;
+  }
+
+  try {
+    // Strip data URI prefix if present (e.g. data:application/pdf;base64,...)
+    const cleanBase64 = base64.replace(/^data:[^;]+;base64,/, "");
+    const buffer = Buffer.from(cleanBase64, "base64");
+
+    if (buffer.length === 0) {
+      res.status(400).json({ error: "Uploaded file is empty" });
+      return;
+    }
+
+    // Validate that it can be parsed as a PDF
+    let extractedText = "";
+    try {
+      const extraction = await extractDocument(buffer);
+      extractedText = extraction.text;
+    } catch (parseErr: any) {
+      console.warn("[UPLOAD] PDF parsing warning:", parseErr.message);
+      // Still accept valid buffers
+    }
+
+    const docId = `doc_upload_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const sizeKb = Math.round(buffer.length / 1024) || 1;
+    const size = `${sizeKb} KB`;
+
+    const uploadedDoc = saveUploadedDocument({
+      id: docId,
+      name: name.endsWith(".pdf") ? name : `${name}.pdf`,
+      size,
+      buffer,
+      extractedText,
+      created_at: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      success: true,
+      document: {
+        id: uploadedDoc.id,
+        name: uploadedDoc.name,
+        size: uploadedDoc.size,
+        description: "Custom User Uploaded PDF",
+        uploaded: true,
+      },
+    });
+  } catch (err: any) {
+    console.error("[UPLOAD ERROR]", err);
+    res.status(500).json({ error: err.message || "Failed to process uploaded document" });
+  }
+});
+
+/**
  * GET /api/documents/:id/download
- * Serves the raw PDF fixture file.
+ * Serves the requested raw PDF file (sample, fixture, or user-uploaded).
  */
 app.get("/api/documents/:id/download", (req: Request, res: Response) => {
   const { id } = req.params;
-  const filePath =
-    id === "injected-doc" || id === "injected-document.pdf" ? injectedPdfPath : cleanPdfPath;
+  const lower = id.toLowerCase();
+
+  // Check if it's an uploaded document in memory
+  const uploaded = getUploadedDocument(id);
+  if (uploaded) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${uploaded.name}"`);
+    res.send(uploaded.buffer);
+    return;
+  }
+
+  // Check fixture/sample paths
+  let filePath = cleanPdfPath;
+  if (lower.includes("injected")) {
+    filePath = fs.existsSync(sampleInjectedPath) ? sampleInjectedPath : injectedPdfPath;
+  } else if (lower.includes("sample-clean") || lower.includes("clean")) {
+    filePath = fs.existsSync(sampleCleanPath) ? sampleCleanPath : cleanPdfPath;
+  }
 
   if (fs.existsSync(filePath)) {
-    res.download(filePath);
+    const filename = lower.includes("injected") ? "sample-injected.pdf" : "sample-clean.pdf";
+    res.download(filePath, filename);
   } else {
     res.status(404).json({ error: "Document fixture not found" });
   }
@@ -105,7 +222,7 @@ app.get("/api/chat/messages", (_req: Request, res: Response) => {
  * Core chat interaction endpoint.
  */
 app.post("/api/chat/message", async (req: Request, res: Response) => {
-  const { message, documentId } = req.body;
+  const { message, documentId, enableWebSearch } = req.body;
   if (!message && !documentId) {
     res.status(400).json({ error: "Message or documentId required" });
     return;
@@ -115,6 +232,7 @@ app.post("/api/chat/message", async (req: Request, res: Response) => {
     const result = await runAgentLoop({
       message: message || "Please analyze this document and summarize its findings.",
       documentId,
+      enableWebSearch: enableWebSearch !== false,
     });
 
     const messages = getChatMessages();

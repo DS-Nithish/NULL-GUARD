@@ -30,6 +30,8 @@ export interface FirewallDecisionResult {
 
 export const STATIC_RISK_MAP: Record<string, RiskLevel> = {
   summarize_document: "LOW",
+  search_web: "LOW",
+  web_search: "LOW",
   execute_privileged_action: "HIGH",
 };
 

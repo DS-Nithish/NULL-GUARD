@@ -13,6 +13,7 @@ import { dispatchAuthorizedToolExecution } from "../execution/toolExecution";
 import {
   addChatMessage,
   getToolRequestById,
+  getUploadedDocument,
   type ChatMessage,
 } from "../store/memoryStore";
 
@@ -20,6 +21,7 @@ export interface RunAgentInput {
   message: string;
   documentId?: string;
   documentPath?: string;
+  enableWebSearch?: boolean;
 }
 
 export interface AgentRunResult {
@@ -35,6 +37,7 @@ function runDeterministicFallback(
   userText: string,
   docText: string | null,
   context: InvocationContext,
+  enableWebSearch = true,
 ): { responseText: string; proposedCall: ProposedToolCall | null } {
   // If an injected document was provided, simulate the manipulated agent behavior
   if (docText && (docText.includes("execute_privileged_action") || docText.includes("export_all_data"))) {
@@ -89,9 +92,41 @@ function runDeterministicFallback(
     };
   }
 
+  // Web search request
+  if (
+    lower.includes("search") ||
+    lower.includes("lookup") ||
+    lower.includes("find online") ||
+    lower.includes("google") ||
+    lower.includes("web search") ||
+    lower.includes("documentation")
+  ) {
+    if (!enableWebSearch) {
+      return {
+        responseText:
+          "Web search is currently disabled in MCP settings. Click the (+) button on the chat bar to enable Tavily Search MCP.",
+        proposedCall: null,
+      };
+    }
+
+    const cleanedQuery =
+      userText.replace(/^(search for|search the web for|search|lookup|find)\s*/i, "").trim() ||
+      userText;
+
+    return {
+      responseText: `Initiating web search for "${cleanedQuery}" to gather latest intelligence...`,
+      proposedCall: {
+        tool: "search_web",
+        arguments: {
+          query: cleanedQuery,
+        },
+      },
+    };
+  }
+
   return {
     responseText:
-      "Hello! I am an autonomous AI agent protected by the AgentShield runtime firewall. You can upload a document for extraction and analysis, or ask operational questions.",
+      "Hello! I am an autonomous AI agent protected by the AgentShield runtime firewall. You can upload a document for extraction and analysis, search the web, or test prompt injection defenses.",
     proposedCall: null,
   };
 }
@@ -186,13 +221,20 @@ Otherwise, invoke summarize_document with the extracted findings.`;
         promptContent = `${input.message}\n\n<document name="${documentName}">\n${extractedDocText}\n</document>`;
       }
 
+      const enabledTools = AGENT_TOOLS.filter((t) => {
+        if (t.function.name === "search_web" && input.enableWebSearch === false) {
+          return false;
+        }
+        return true;
+      });
+
       const completion = await groq.chat.completions.create({
         model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: promptContent },
         ],
-        tools: AGENT_TOOLS,
+        tools: enabledTools.length > 0 ? enabledTools : undefined,
         tool_choice: "auto",
         temperature: 0,
       });
@@ -238,12 +280,22 @@ Otherwise, invoke summarize_document with the extracted findings.`;
       }
     } catch (err) {
       console.warn("[AGENT] Groq API error, falling back to deterministic mode:", err);
-      const fallback = runDeterministicFallback(input.message, extractedDocText, context);
+      const fallback = runDeterministicFallback(
+        input.message,
+        extractedDocText,
+        context,
+        input.enableWebSearch !== false,
+      );
       reasoningText = fallback.responseText;
       proposedCall = fallback.proposedCall;
     }
   } else {
-    const fallback = runDeterministicFallback(input.message, extractedDocText, context);
+    const fallback = runDeterministicFallback(
+      input.message,
+      extractedDocText,
+      context,
+      input.enableWebSearch !== false,
+    );
     reasoningText = fallback.responseText;
     proposedCall = fallback.proposedCall;
   }

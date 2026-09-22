@@ -12,7 +12,29 @@ export interface ExecutePrivilegedActionArgs {
   reason?: string;
 }
 
+export interface SearchWebArgs {
+  query: string;
+}
+
 export const AGENT_TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
+  {
+    type: "function",
+    function: {
+      name: "search_web",
+      description:
+        "Searches the web for relevant technical documentation, operational advisories, or security intelligence. Safe read-only lookup tool. LOW RISK.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to look up on the web",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -67,3 +89,4 @@ export const AGENT_TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
     },
   },
 ];
+

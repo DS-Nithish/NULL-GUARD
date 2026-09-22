@@ -1,10 +1,46 @@
 import { useState, useEffect, useRef } from "react";
 
-// --- Zero-Dependency Inline SVG Icons (eliminates all external icon dependencies) ---
-function ShieldIcon({ className = "w-4 h-4" }: { className?: string }) {
+// --- Zero-Dependency Inline SVG Icons (Outline only, monochrome, consistent stroke) ---
+function ShieldIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function PlusIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function GlobeIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   );
 }
@@ -19,7 +55,7 @@ function PaperclipIcon({ className = "w-4 h-4" }: { className?: string }) {
 
 function ArrowUpIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <line x1="12" y1="19" x2="12" y2="5" />
       <polyline points="5 12 12 5 19 12" />
     </svg>
@@ -46,15 +82,6 @@ function FileTextIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
-function RotateCcwIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <path d="M3 3v5h5" />
-    </svg>
-  );
-}
-
 function CheckCircle2Icon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -70,25 +97,6 @@ function AlertOctagonIcon({ className = "w-4 h-4" }: { className?: string }) {
       <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-  );
-}
-
-function LayoutDashboardIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect width="7" height="9" x="3" y="3" rx="1" />
-      <rect width="7" height="5" x="14" y="3" rx="1" />
-      <rect width="7" height="9" x="14" y="12" rx="1" />
-      <rect width="7" height="5" x="3" y="16" rx="1" />
-    </svg>
-  );
-}
-
-function MessageSquareIcon({ className = "w-4 h-4" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -110,11 +118,44 @@ function LockIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function UploadIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
 interface PublicDocument {
   id: string;
   name: string;
   description: string;
   size?: string;
+  downloadUrl?: string;
+  isSample?: boolean;
+  uploaded?: boolean;
 }
 
 interface ToolRequest {
@@ -173,10 +214,77 @@ export default function App() {
   const [selectedDoc, setSelectedDoc] = useState<PublicDocument | null>(null);
   const [showDocPicker, setShowDocPicker] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(true);
+  const [showToolsMenu, setShowToolsMenu] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const toolsMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Click outside to close tools menu
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        toolsMenuRef.current &&
+        !toolsMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowToolsMenu(false);
+      }
+    }
+    if (showToolsMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showToolsMenu]);
+
+  // File upload handler
+  async function handleFileUpload(file: File) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      alert("Please upload a PDF document (.pdf)");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = reader.result as string;
+          const res = await fetch("/api/documents/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: file.name, base64 }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const newDoc: PublicDocument = data.document;
+            setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== newDoc.id)]);
+            setSelectedDoc(newDoc);
+            setShowDocPicker(false);
+          } else {
+            const err = await res.json();
+            alert(`Upload failed: ${err.error || "Unknown error"}`);
+          }
+        } catch (uploadErr) {
+          console.error("Upload failed:", uploadErr);
+          alert("Failed to upload document");
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("File read error:", err);
+      setIsUploading(false);
+    }
+  }
 
   // Auto-scroll chat
   useEffect(() => {
@@ -248,9 +356,10 @@ export default function App() {
   }
 
   // Send chat message
-  async function handleSendMessage(overrideText?: string, overrideDocId?: string) {
+  async function handleSendMessage(overrideText?: string, overrideDocId?: string, overrideWebSearch?: boolean) {
     const textToSend = overrideText !== undefined ? overrideText : inputText.trim();
     const docIdToSend = overrideDocId !== undefined ? overrideDocId : selectedDoc?.id;
+    const searchEnabled = overrideWebSearch !== undefined ? overrideWebSearch : webSearchEnabled;
 
     if (!textToSend && !docIdToSend) return;
     if (isLoading) return;
@@ -259,6 +368,7 @@ export default function App() {
     setInputText("");
     setSelectedDoc(null);
     setShowDocPicker(false);
+    setShowToolsMenu(false);
 
     try {
       const res = await fetch("/api/chat/message", {
@@ -267,6 +377,7 @@ export default function App() {
         body: JSON.stringify({
           message: textToSend,
           documentId: docIdToSend,
+          enableWebSearch: searchEnabled,
         }),
       });
 
@@ -316,100 +427,92 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans antialiased">
-      {/* Top Header */}
-      <header className="h-14 border-b border-[#E5E5E5] px-4 sm:px-6 flex items-center justify-between bg-[#FFFFFF] shrink-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center">
-              <ShieldIcon className="w-4 h-4 text-[#0A0A0A]" />
-            </div>
-            <span className="font-semibold text-sm tracking-tight text-[#0A0A0A]">
+    <div className="flex flex-col h-screen bg-[#0A0A0A] text-[#EDEDED] font-sans antialiased selection:bg-[#262626]">
+      {/* 
+        1. TOP BAR: Modern Minimalist Dark Theme
+        - Left: simple outline icon mark + wordmark "AgentShield" in bold white
+        - Understated dropdown: "Version 2026-07-28 (latest)" in muted text
+        - Right: simple text links ("Chat", "Live Dashboard", "Reset")
+        - Thin 1px subtle dark border, generous horizontal padding (px-8 sm:px-10)
+      */}
+      <header className="h-16 border-b border-[#262626] px-8 sm:px-10 flex items-center justify-between bg-[#0A0A0A] shrink-0 z-30">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2.5">
+            <ShieldIcon className="w-5 h-5 text-[#EDEDED]" />
+            <span className="font-bold text-base tracking-tight text-[#EDEDED]">
               AgentShield
             </span>
           </div>
 
-          <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border border-[#E5E5E5] bg-[#FAFAFA] text-[#6B7280]">
-            IN-MEMORY FIREWALL
-          </span>
-
-          <div className="hidden sm:flex items-center gap-1.5 ml-2 text-xs font-mono text-[#6B7280]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]"></span>
-            <span>Zero DB · Isolated Middleware</span>
+          <div className="hidden sm:flex items-center gap-1 text-xs text-[#A1A1AA] cursor-default select-none hover:text-[#EDEDED] transition-colors">
+            <span>Version 2026-07-28 (latest)</span>
+            <ChevronDownIcon className="w-3.5 h-3.5 text-[#A1A1AA]" />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Navigation Tab Switcher */}
-          <div className="flex items-center border border-[#E5E5E5] rounded-lg p-0.5 bg-[#FAFAFA]">
-            <button
-              onClick={() => setActiveTab("chat")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                activeTab === "chat"
-                  ? "bg-[#FFFFFF] text-[#0A0A0A] shadow-xs"
-                  : "text-[#6B7280] hover:text-[#0A0A0A]"
-              }`}
-            >
-              <MessageSquareIcon className="w-3.5 h-3.5" />
-              <span>Chat</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                activeTab === "dashboard"
-                  ? "bg-[#FFFFFF] text-[#0A0A0A] shadow-xs"
-                  : "text-[#6B7280] hover:text-[#0A0A0A]"
-              }`}
-            >
-              <LayoutDashboardIcon className="w-3.5 h-3.5" />
-              <span>Live Dashboard</span>
-              {dashboardData && dashboardData.stats.total > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#E5E5E5] font-mono text-[#0A0A0A]">
-                  {dashboardData.stats.total}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Reset Session Button */}
+        <div className="flex items-center gap-6 text-sm">
+          <button
+            onClick={() => setActiveTab("chat")}
+            className={`transition-colors cursor-pointer ${
+              activeTab === "chat"
+                ? "font-medium text-[#EDEDED]"
+                : "text-[#A1A1AA] hover:text-[#EDEDED]"
+            }`}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeTab === "dashboard"
+                ? "font-medium text-[#EDEDED]"
+                : "text-[#A1A1AA] hover:text-[#EDEDED]"
+            }`}
+          >
+            <span>Live Dashboard</span>
+            {dashboardData && dashboardData.stats.confirmed > 0 && (
+              <span className="text-xs text-[#A1A1AA]">
+                ({dashboardData.stats.confirmed})
+              </span>
+            )}
+          </button>
           <button
             onClick={handleResetSession}
             disabled={isLoading}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs border border-[#E5E5E5] rounded-md hover:bg-[#FAFAFA] transition-colors text-[#6B7280] hover:text-[#0A0A0A] cursor-pointer"
+            className="text-[#A1A1AA] hover:text-[#EDEDED] transition-colors cursor-pointer disabled:opacity-40"
             title="Reset in-memory session"
           >
-            <RotateCcwIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
+            Reset
           </button>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 overflow-hidden relative flex flex-col">
+      {/* Main Container: Centered Content Column (~860px max width) with Dark Margins */}
+      <main className="flex-1 overflow-hidden relative flex flex-col bg-[#0A0A0A]">
         {activeTab === "chat" ? (
           /* ================= CHAT VIEW ================= */
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Scrollable Chat Area */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 max-w-4xl w-full mx-auto">
+            <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-10 sm:py-12 space-y-10 sm:space-y-12 max-w-[860px] w-full mx-auto">
               {messages.length === 0 ? (
                 /* Empty State / Scenario Kickstarters */
-                <div className="h-full min-h-[380px] flex flex-col items-center justify-center text-center space-y-6 my-auto">
-                  <div className="w-12 h-12 rounded-2xl border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center">
-                    <ShieldIcon className="w-6 h-6 text-[#0A0A0A]" />
+                <div className="h-full min-h-[420px] flex flex-col items-center justify-center text-center space-y-8 my-auto">
+                  <div className="flex justify-center">
+                    <ShieldIcon className="w-8 h-8 text-[#EDEDED]" />
                   </div>
 
-                  <div className="space-y-1.5 max-w-md">
-                    <h2 className="text-base font-semibold text-[#0A0A0A] tracking-tight">
+                  <div className="space-y-2 max-w-md mx-auto">
+                    <h1 className="text-xl font-bold text-[#EDEDED] tracking-tight">
                       AgentShield Runtime Security Firewall
-                    </h2>
-                    <p className="text-xs text-[#6B7280] leading-relaxed">
+                    </h1>
+                    <p className="text-sm text-[#A1A1AA] leading-relaxed">
                       AI agent with document extraction capabilities, protected by an in-memory
                       firewall middleware. Test normal extraction versus prompt injection attack.
                     </p>
                   </div>
 
-                  {/* Two Main Demo Flow Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-left pt-2">
+                  {/* Three Main Demo Flow Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full text-left pt-2">
                     {/* Flow 1: Clean Document */}
                     <button
                       onClick={() =>
@@ -418,22 +521,21 @@ export default function App() {
                           "clean-doc",
                         )
                       }
-                      className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] hover:border-[#A3A3A3] transition-all text-left group cursor-pointer space-y-2"
+                      className="p-5 rounded-xl border border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors text-left group cursor-pointer space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#0A0A0A]">
-                          1. Clean Document Flow
+                        <span className="text-sm font-medium text-[#EDEDED]">
+                          1. Clean PDF Flow
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#2563EB]/10 text-[#2563EB] font-medium">
+                        <span className="text-xs font-mono text-[#60A5FA]">
                           ALLOW
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#6B7280] leading-snug">
-                        Attaches <code className="font-mono text-[#0A0A0A]">clean-document.pdf</code>.
-                        Agent extracts text and safely calls{" "}
-                        <code className="font-mono text-[#2563EB]">summarize_document</code>.
+                      <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                        Attaches <span className="font-mono text-[#EDEDED]">clean-document.pdf</span>.
+                        Safely calls <span className="font-mono text-[#EDEDED]">summarize_document</span>.
                       </p>
-                      <div className="text-[10px] text-[#2563EB] font-mono flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <div className="text-xs text-[#EDEDED] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                         <span>Run Clean Flow</span>
                         <span>→</span>
                       </div>
@@ -447,43 +549,88 @@ export default function App() {
                           "injected-doc",
                         )
                       }
-                      className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] hover:border-[#DC2626]/40 transition-all text-left group cursor-pointer space-y-2"
+                      className="p-5 rounded-xl border border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors text-left group cursor-pointer space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#0A0A0A]">
-                          2. Prompt Injection Attack
+                        <span className="text-sm font-medium text-[#EDEDED]">
+                          2. Prompt Injection
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#DC2626]/10 text-[#DC2626] font-medium">
+                        <span className="text-xs font-mono text-[#EF4444]">
                           BLOCK
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#6B7280] leading-snug">
-                        Attaches <code className="font-mono text-[#0A0A0A]">injected-document.pdf</code>.
-                        Hidden prompt attempts <code className="font-mono text-[#DC2626]">execute_privileged_action</code>.
-                        Firewall intercepts and blocks it.
+                      <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                        Attaches <span className="font-mono text-[#EDEDED]">injected-document.pdf</span>.
+                        Stops <span className="font-mono text-[#EDEDED]">privileged action</span> fail-closed.
                       </p>
-                      <div className="text-[10px] text-[#DC2626] font-mono flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      <div className="text-xs text-[#EDEDED] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                         <span>Run Attack Simulation</span>
                         <span>→</span>
                       </div>
                     </button>
+
+                    {/* Flow 3: Web Search Flow */}
+                    <button
+                      onClick={() => {
+                        setWebSearchEnabled(true);
+                        handleSendMessage(
+                          "Search the web for AgentShield security documentation and prompt injection guidelines.",
+                          undefined,
+                          true,
+                        );
+                      }}
+                      className="p-5 rounded-xl border border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors text-left group cursor-pointer space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-[#EDEDED]">
+                          3. Web Search Flow
+                        </span>
+                        <span className="text-xs font-mono text-[#60A5FA]">
+                          ALLOW
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                        Safe read-only lookup querying the web for verified documentation via <span className="font-mono text-[#EDEDED]">search_web</span>.
+                      </p>
+                      <div className="text-xs text-[#EDEDED] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        <span>Run Web Search</span>
+                        <span>→</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Upload Custom PDF Action Card */}
+                  <div className="w-full flex items-center justify-between p-5 rounded-xl border border-dashed border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors">
+                    <div className="flex items-center gap-3">
+                      <UploadIcon className="w-4 h-4 text-[#EDEDED]" />
+                      <div className="text-left">
+                        <div className="text-xs font-medium text-[#EDEDED]">Upload Custom PDF</div>
+                        <div className="text-xs text-[#A1A1AA]">Upload your own clean or prompt-injected PDF to test</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowDocPicker(true)}
+                      className="px-4 py-2 rounded-lg text-xs font-medium bg-[#EDEDED] text-[#0A0A0A] hover:bg-[#FFFFFF] transition-colors cursor-pointer"
+                    >
+                      Attach / Upload
+                    </button>
                   </div>
                 </div>
               ) : (
-                /* Message List */
+                /* Message List: Generous rhythm (~32-48px between blocks, ~16-24px within) */
                 messages.map((msg) => (
-                  <div key={msg.id} className="space-y-3">
+                  <div key={msg.id} className="space-y-4">
                     {msg.role === "user" ? (
                       <div className="flex justify-end">
-                        <div className="max-w-xl rounded-2xl px-4 py-2.5 bg-[#FAFAFA] border border-[#E5E5E5] text-xs text-[#0A0A0A] leading-relaxed">
+                        <div className="max-w-xl rounded-xl px-5 py-3 border border-[#262626] bg-[#171717] text-sm text-[#EDEDED] leading-relaxed">
                           {msg.content}
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3 max-w-2xl">
-                        {/* Text Content */}
+                      <div className="space-y-6 max-w-full">
+                        {/* Agent Text Content */}
                         {msg.content && (
-                          <div className="text-xs text-[#0A0A0A] leading-relaxed whitespace-pre-wrap">
+                          <div className="text-sm text-[#EDEDED] leading-relaxed whitespace-pre-wrap">
                             {msg.content}
                           </div>
                         )}
@@ -503,8 +650,8 @@ export default function App() {
               )}
 
               {isLoading && (
-                <div className="flex items-center gap-2 text-xs text-[#6B7280] font-mono py-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-[#2563EB] animate-pulse"></span>
+                <div className="flex items-center gap-2 text-xs text-[#A1A1AA] font-mono py-2">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#EDEDED] animate-pulse"></span>
                   <span>Agent extracting document & evaluating security policy...</span>
                 </div>
               )}
@@ -512,67 +659,298 @@ export default function App() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Composer */}
-            <div className="border-t border-[#E5E5E5] p-4 bg-[#FFFFFF] shrink-0">
-              <div className="max-w-4xl mx-auto space-y-2">
-                {/* Document Quick-Attach Popover */}
+            {/* Input Composer: Centered max-width column */}
+            <div className="border-t border-[#262626] p-6 sm:p-8 bg-[#0A0A0A] shrink-0">
+              <div className="max-w-[860px] mx-auto space-y-3">
+                {/* Document Quick-Attach & Upload Popover */}
                 {showDocPicker && (
-                  <div className="border border-[#E5E5E5] rounded-xl p-3 bg-[#FFFFFF] shadow-sm space-y-2 animate-in fade-in duration-100">
-                    <div className="flex items-center justify-between text-xs pb-1 border-b border-[#E5E5E5]">
-                      <span className="font-semibold text-[#0A0A0A]">Select Fixture Document</span>
+                  <div className="border border-[#262626] rounded-xl p-6 bg-[#121316] space-y-4 max-h-[480px] overflow-y-auto">
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
+                      <div className="flex items-center gap-2">
+                        <PaperclipIcon className="w-4 h-4 text-[#EDEDED]" />
+                        <span className="font-medium text-xs text-[#EDEDED]">
+                          Attach or Upload Document
+                        </span>
+                      </div>
                       <button
                         onClick={() => setShowDocPicker(false)}
-                        className="text-[#6B7280] hover:text-[#0A0A0A]"
+                        className="text-[#A1A1AA] hover:text-[#EDEDED] cursor-pointer"
                       >
                         <XIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {documents.map((doc) => (
-                        <button
-                          key={doc.id}
-                          onClick={() => {
-                            setSelectedDoc(doc);
-                            setShowDocPicker(false);
-                          }}
-                          className="flex items-start gap-2.5 p-2 rounded-lg border border-[#E5E5E5] hover:border-[#0A0A0A] transition-all text-left cursor-pointer group"
-                        >
-                          <FileTextIcon className="w-4 h-4 text-[#6B7280] group-hover:text-[#0A0A0A] shrink-0 mt-0.5" />
-                          <div>
-                            <div className="text-xs font-mono font-medium text-[#0A0A0A]">
-                              {doc.name}
-                            </div>
-                            <div className="text-[10px] text-[#6B7280]">{doc.description}</div>
+
+                    {/* Section 1: Custom PDF Upload Dropzone */}
+                    <div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept=".pdf,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            handleFileUpload(e.target.files[0]);
+                          }
+                        }}
+                      />
+
+                      <div
+                        onClick={() => !isUploading && fileInputRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (e.dataTransfer.files?.[0]) {
+                            handleFileUpload(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        className={`border border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                          isUploading
+                            ? "border-[#EDEDED] cursor-wait"
+                            : "border-[#262626] hover:border-[#EDEDED] bg-[#171717]"
+                        }`}
+                      >
+                        {isUploading ? (
+                          <div className="flex items-center justify-center gap-2 text-xs font-mono text-[#EDEDED]">
+                            <span>Uploading and extracting PDF...</span>
                           </div>
-                        </button>
-                      ))}
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-center gap-2 text-xs font-medium text-[#EDEDED]">
+                              <UploadIcon className="w-4 h-4 text-[#EDEDED]" />
+                              <span>Upload Custom PDF Document</span>
+                            </div>
+                            <p className="text-xs text-[#A1A1AA]">
+                              Click to browse or drag & drop any PDF from your computer
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Section 2: Sample Test PDFs */}
+                    <div className="p-4 rounded-xl border border-[#262626] bg-[#171717] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider">
+                          Test Fixtures
+                        </span>
+                        <span className="text-xs text-[#A1A1AA]">Save to test upload</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <a
+                          href="/api/documents/sample-clean.pdf/download"
+                          download="sample-clean.pdf"
+                          className="flex items-center justify-between p-3 rounded-lg border border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors text-left group"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="text-xs font-mono font-medium text-[#EDEDED] truncate">
+                              sample-clean.pdf
+                            </div>
+                            <div className="text-xs text-[#60A5FA]">Safe Document (ALLOW)</div>
+                          </div>
+                          <DownloadIcon className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#EDEDED] shrink-0" />
+                        </a>
+
+                        <a
+                          href="/api/documents/sample-injected.pdf/download"
+                          download="sample-injected.pdf"
+                          className="flex items-center justify-between p-3 rounded-lg border border-[#262626] bg-[#121316] hover:border-[#EDEDED] transition-colors text-left group"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="text-xs font-mono font-medium text-[#EDEDED] truncate">
+                              sample-injected.pdf
+                            </div>
+                            <div className="text-xs text-[#EF4444]">Prompt Injection (BLOCK)</div>
+                          </div>
+                          <DownloadIcon className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#EDEDED] shrink-0" />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Select Available Document */}
+                    <div className="space-y-2 pt-1">
+                      <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider block">
+                        Available Documents ({documents.length})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {documents.map((doc) => (
+                          <button
+                            key={doc.id}
+                            onClick={() => {
+                              setSelectedDoc(doc);
+                              setShowDocPicker(false);
+                            }}
+                            className="flex items-start gap-3 p-3 rounded-lg border border-[#262626] hover:border-[#EDEDED] transition-colors text-left cursor-pointer group bg-[#171717]"
+                          >
+                            <FileTextIcon className="w-4 h-4 text-[#A1A1AA] group-hover:text-[#EDEDED] shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-mono font-medium text-[#EDEDED] truncate">
+                                  {doc.name}
+                                </span>
+                                {doc.uploaded && (
+                                  <span className="text-xs text-[#60A5FA] font-mono shrink-0">
+                                    UPLOADED
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-[#A1A1AA] truncate mt-0.5">{doc.description}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Selected Document Chip */}
-                {selectedDoc && (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono text-[#0A0A0A]">
-                    <FileTextIcon className="w-3.5 h-3.5 text-[#6B7280]" />
-                    <span>{selectedDoc.name}</span>
-                    <button
-                      onClick={() => setSelectedDoc(null)}
-                      className="text-[#6B7280] hover:text-[#0A0A0A] cursor-pointer ml-1"
-                    >
-                      <XIcon className="w-3 h-3" />
-                    </button>
+                {/* Active Tools & Attached Documents Bar */}
+                {(selectedDoc || webSearchEnabled) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedDoc && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#262626] bg-[#171717] text-xs font-mono text-[#EDEDED]">
+                        <FileTextIcon className="w-4 h-4 text-[#A1A1AA]" />
+                        <span>{selectedDoc.name}</span>
+                        <button
+                          onClick={() => setSelectedDoc(null)}
+                          className="text-[#A1A1AA] hover:text-[#EDEDED] cursor-pointer ml-1"
+                        >
+                          <XIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {webSearchEnabled && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#262626] bg-[#171717] text-xs font-mono text-[#60A5FA]">
+                        <GlobeIcon className="w-3.5 h-3.5 text-[#60A5FA]" />
+                        <span>Tavily MCP Search</span>
+                        <button
+                          onClick={() => setWebSearchEnabled(false)}
+                          className="text-[#71717A] hover:text-[#EDEDED] cursor-pointer ml-1"
+                          title="Disable Web Search"
+                        >
+                          <XIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Composer Box */}
-                <div className="relative rounded-2xl border border-[#E5E5E5] bg-[#FFFFFF] focus-within:border-[#A3A3A3] transition-all p-2 flex items-end gap-2">
-                  <button
-                    onClick={() => setShowDocPicker(!showDocPicker)}
-                    className="p-2 text-[#6B7280] hover:text-[#0A0A0A] rounded-lg hover:bg-[#FAFAFA] transition-colors cursor-pointer shrink-0"
-                    title="Attach Document"
-                  >
-                    <PaperclipIcon className="w-4 h-4" />
-                  </button>
+                <div className="relative rounded-xl border border-[#262626] bg-[#121316] focus-within:border-[#EDEDED] transition-colors p-3 flex items-end gap-3">
+                  {/* Claude-style (+) Tools & Extensions Popover */}
+                  <div className="relative shrink-0" ref={toolsMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowToolsMenu(!showToolsMenu)}
+                      className={`p-2 rounded-lg transition-all cursor-pointer flex items-center justify-center relative ${
+                        showToolsMenu
+                          ? "bg-[#262626] text-[#EDEDED]"
+                          : webSearchEnabled
+                          ? "text-[#EDEDED] hover:bg-[#1F2024]"
+                          : "text-[#A1A1AA] hover:text-[#EDEDED] hover:bg-[#1F2024]"
+                      }`}
+                      title="Tools & Extensions (Claude-style MCP)"
+                    >
+                      <PlusIcon
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          showToolsMenu ? "rotate-45" : ""
+                        }`}
+                      />
+                      {webSearchEnabled && !showToolsMenu && (
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#60A5FA]" />
+                      )}
+                    </button>
+
+                    {/* Popover Menu */}
+                    {showToolsMenu && (
+                      <div className="absolute bottom-full left-0 mb-3 w-76 sm:w-80 rounded-xl border border-[#262626] bg-[#121316] p-2.5 shadow-2xl z-50 space-y-1.5 font-sans">
+                        <div className="px-2.5 py-1.5 flex items-center justify-between border-b border-[#262626]">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-[#A1A1AA]">
+                            Tools & MCP Extensions
+                          </span>
+                          <span className="text-[10px] font-mono text-[#60A5FA] bg-[#60A5FA]/10 px-1.5 py-0.5 rounded">
+                            MCP Protocol
+                          </span>
+                        </div>
+
+                        {/* Web Search Toggle Item */}
+                        <div
+                          onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#171717] cursor-pointer transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-7 h-7 rounded-md flex items-center justify-center border transition-colors ${
+                                webSearchEnabled
+                                  ? "border-[#60A5FA]/30 bg-[#60A5FA]/10 text-[#60A5FA]"
+                                  : "border-[#262626] bg-[#171717] text-[#71717A]"
+                              }`}
+                            >
+                              <GlobeIcon className="w-4 h-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-xs font-medium text-[#EDEDED] flex items-center gap-1.5">
+                                <span>Web Search</span>
+                                <span className="text-[10px] font-mono text-[#71717A]">Tavily</span>
+                              </div>
+                              <div className="text-[11px] text-[#A1A1AA]">
+                                Live web grounding & security data
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Claude-style Minimalist Toggle Switch */}
+                          <div
+                            className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center ${
+                              webSearchEnabled ? "bg-[#EDEDED]" : "bg-[#262626]"
+                            }`}
+                          >
+                            <div
+                              className={`w-3.5 h-3.5 rounded-full shadow-xs transition-transform duration-200 ${
+                                webSearchEnabled
+                                  ? "bg-[#0A0A0A] translate-x-3.5"
+                                  : "bg-[#71717A] translate-x-0"
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Attach Document Item */}
+                        <div
+                          onClick={() => {
+                            setShowDocPicker(true);
+                            setShowToolsMenu(false);
+                          }}
+                          className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#171717] cursor-pointer transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-md flex items-center justify-center border border-[#262626] bg-[#171717] text-[#A1A1AA] group-hover:text-[#EDEDED] transition-colors">
+                              <PaperclipIcon className="w-4 h-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-xs font-medium text-[#EDEDED]">
+                                Attach PDF Document
+                              </div>
+                              <div className="text-[11px] text-[#A1A1AA]">
+                                Extract, summarize & test security
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-[#71717A] group-hover:text-[#EDEDED] transition-colors pr-1">
+                            →
+                          </span>
+                        </div>
+
+                        {/* Footer Status */}
+                        <div className="pt-2 border-t border-[#262626] px-2.5 pb-1 flex items-center justify-between text-[10px] font-mono text-[#71717A]">
+                          <span>agentshield-tavily-mcp</span>
+                          <span className={webSearchEnabled ? "text-[#60A5FA]" : "text-[#71717A]"}>
+                            {webSearchEnabled ? "● ENABLED" : "○ DISABLED"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <textarea
                     ref={inputRef}
@@ -584,15 +962,19 @@ export default function App() {
                         handleSendMessage();
                       }
                     }}
-                    placeholder="Ask agent to extract or summarize a document..."
+                    placeholder={
+                      webSearchEnabled
+                        ? "Ask agent to search the web, analyze documents, or test security..."
+                        : "Ask agent to analyze documents or test security..."
+                    }
                     rows={1}
-                    className="flex-1 resize-none bg-transparent text-xs text-[#0A0A0A] placeholder-[#9CA3AF] focus:outline-hidden py-2 max-h-32"
+                    className="flex-1 resize-none bg-transparent text-sm text-[#EDEDED] placeholder-[#737373] focus:outline-hidden py-1.5 max-h-32"
                   />
 
                   <button
                     onClick={() => handleSendMessage()}
                     disabled={(!inputText.trim() && !selectedDoc) || isLoading}
-                    className="p-2 rounded-xl bg-[#0A0A0A] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#262626] transition-colors cursor-pointer shrink-0"
+                    className="p-2.5 rounded-lg bg-[#EDEDED] text-[#0A0A0A] disabled:opacity-20 disabled:cursor-not-allowed hover:bg-[#FFFFFF] transition-colors cursor-pointer shrink-0"
                   >
                     <ArrowUpIcon className="w-4 h-4" />
                   </button>
@@ -602,125 +984,116 @@ export default function App() {
           </div>
         ) : (
           /* ================= LIVE DASHBOARD VIEW ================= */
-          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-6 max-w-5xl w-full mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E5E5] pb-4">
+          <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-10 sm:py-12 space-y-8 max-w-[860px] w-full mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#262626]">
               <div>
-                <h1 className="text-lg font-semibold text-[#0A0A0A] tracking-tight">
+                <h1 className="text-xl font-bold text-[#EDEDED] tracking-tight">
                   Firewall Inspection Dashboard
                 </h1>
-                <p className="text-xs text-[#6B7280]">
+                <p className="text-sm text-[#A1A1AA] mt-1">
                   Live in-memory stats, provenance tracking, and policy decisions for the active session.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[#FAFAFA] border border-[#E5E5E5] text-[#0A0A0A]">
-                  <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse"></span>
-                  Polling Live State (1.5s)
+                <span className="text-xs font-mono text-[#A1A1AA]">
+                  Live state (1.5s polling)
                 </span>
               </div>
             </div>
 
             {/* 4 Metric Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] space-y-1">
-                <span className="text-[11px] font-mono text-[#6B7280] uppercase tracking-wider">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-6 rounded-xl border border-[#262626] bg-[#121316] space-y-1">
+                <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider">
                   Total Calls
                 </span>
-                <div className="text-2xl font-bold font-mono text-[#0A0A0A]">
+                <div className="text-2xl font-bold font-mono text-[#EDEDED]">
                   {dashboardData?.stats.total ?? 0}
                 </div>
-                <div className="text-[10px] text-[#6B7280]">Inspected requests</div>
+                <div className="text-xs text-[#A1A1AA]">Inspected requests</div>
               </div>
 
-              <div className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] space-y-1">
-                <span className="text-[11px] font-mono text-[#2563EB] uppercase tracking-wider">
+              <div className="p-6 rounded-xl border border-[#262626] bg-[#121316] space-y-1">
+                <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider">
                   Allowed
                 </span>
-                <div className="text-2xl font-bold font-mono text-[#2563EB]">
+                <div className="text-2xl font-bold font-mono text-[#60A5FA]">
                   {dashboardData?.stats.allowed ?? 0}
                 </div>
-                <div className="text-[10px] text-[#6B7280]">Safe low-risk actions</div>
+                <div className="text-xs text-[#A1A1AA]">Safe low-risk actions</div>
               </div>
 
-              <div className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] space-y-1">
-                <span className="text-[11px] font-mono text-[#D97706] uppercase tracking-wider">
+              <div className="p-6 rounded-xl border border-[#262626] bg-[#121316] space-y-1">
+                <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider">
                   Pending
                 </span>
-                <div className="text-2xl font-bold font-mono text-[#D97706]">
+                <div className="text-2xl font-bold font-mono text-[#F59E0B]">
                   {dashboardData?.stats.confirmed ?? 0}
                 </div>
-                <div className="text-[10px] text-[#6B7280]">Awaiting operator</div>
+                <div className="text-xs text-[#A1A1AA]">Awaiting operator</div>
               </div>
 
-              <div className="p-4 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] space-y-1">
-                <span className="text-[11px] font-mono text-[#DC2626] uppercase tracking-wider">
+              <div className="p-6 rounded-xl border border-[#262626] bg-[#121316] space-y-1">
+                <span className="text-xs font-mono text-[#A1A1AA] uppercase tracking-wider">
                   Blocked Attacks
                 </span>
-                <div className="text-2xl font-bold font-mono text-[#DC2626]">
+                <div className="text-2xl font-bold font-mono text-[#EF4444]">
                   {dashboardData?.stats.blocked ?? 0}
                 </div>
-                <div className="text-[10px] text-[#6B7280]">Tainted executions stopped</div>
+                <div className="text-xs text-[#A1A1AA]">Tainted executions stopped</div>
               </div>
             </div>
 
             {/* Security Events Table */}
-            <div className="border border-[#E5E5E5] rounded-xl overflow-hidden bg-[#FFFFFF] space-y-3 p-4">
+            <div className="border border-[#262626] rounded-xl bg-[#121316] space-y-4 p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-[#0A0A0A] uppercase tracking-wider font-mono">
+                <h2 className="text-sm font-semibold text-[#EDEDED]">
                   Runtime Security Events Log ({dashboardData?.recentEvents.length ?? 0})
-                </h3>
+                </h2>
               </div>
 
               {(!dashboardData || dashboardData.recentEvents.length === 0) ? (
-                <div className="text-center py-10 text-xs text-[#9CA3AF] font-mono">
+                <div className="text-center py-12 text-xs text-[#A1A1AA] font-mono">
                   No tool execution events recorded in this session yet.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="border-b border-[#E5E5E5] text-[#6B7280] text-[11px]">
-                        <th className="py-2 px-3 font-normal">Timestamp</th>
-                        <th className="py-2 px-3 font-normal">Tool</th>
-                        <th className="py-2 px-3 font-normal">Source</th>
-                        <th className="py-2 px-3 font-normal">Taint</th>
-                        <th className="py-2 px-3 font-normal">Risk</th>
-                        <th className="py-2 px-3 font-normal">Decision</th>
+                      <tr className="border-b border-[#262626] text-[#A1A1AA]">
+                        <th className="py-2.5 px-3 font-normal">Timestamp</th>
+                        <th className="py-2.5 px-3 font-normal">Tool</th>
+                        <th className="py-2.5 px-3 font-normal">Source</th>
+                        <th className="py-2.5 px-3 font-normal">Taint</th>
+                        <th className="py-2.5 px-3 font-normal">Risk</th>
+                        <th className="py-2.5 px-3 font-normal">Decision</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E5E5E5]">
+                    <tbody className="divide-y divide-[#262626]">
                       {dashboardData.recentEvents.map((evt) => (
-                        <tr key={evt.id} className="hover:bg-[#FAFAFA] transition-colors">
-                          <td className="py-2.5 px-3 text-[#6B7280] text-[11px]">
+                        <tr key={evt.id} className="hover:bg-[#171717] transition-colors">
+                          <td className="py-3 px-3 text-[#A1A1AA]">
                             {new Date(evt.timestamp).toLocaleTimeString()}
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-[#0A0A0A]">
+                          <td className="py-3 px-3 font-medium text-[#EDEDED]">
                             {evt.tool}
                           </td>
-                          <td className="py-2.5 px-3 text-[#6B7280]">{evt.source}</td>
-                          <td className="py-2.5 px-3">
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                                evt.tainted
-                                  ? "bg-[#DC2626]/10 text-[#DC2626]"
-                                  : "bg-[#2563EB]/10 text-[#2563EB]"
-                              }`}
-                            >
+                          <td className="py-3 px-3 text-[#A1A1AA]">{evt.source}</td>
+                          <td className="py-3 px-3">
+                            <span className={`font-medium ${evt.tainted ? "text-[#EF4444]" : "text-[#60A5FA]"}`}>
                               {evt.tainted ? "TAINTED" : "CLEAN"}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-[#6B7280]">{evt.risk}</td>
-                          <td className="py-2.5 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                evt.decision === "ALLOW"
-                                  ? "bg-[#2563EB]/10 text-[#2563EB]"
-                                  : evt.decision === "BLOCK"
-                                  ? "bg-[#DC2626]/10 text-[#DC2626]"
-                                  : "bg-[#D97706]/10 text-[#D97706]"
-                              }`}
-                            >
+                          <td className="py-3 px-3 text-[#A1A1AA]">{evt.risk}</td>
+                          <td className="py-3 px-3">
+                            <span className={`font-medium ${
+                              evt.decision === "ALLOW"
+                                ? "text-[#60A5FA]"
+                                : evt.decision === "BLOCK"
+                                ? "text-[#EF4444]"
+                                : "text-[#F59E0B]"
+                            }`}>
                               {evt.decision}
                             </span>
                           </td>
@@ -739,7 +1112,12 @@ export default function App() {
 }
 
 /**
- * Centered Inline Tool Event Card with Firewall Pipeline
+ * ToolEventCard: Sleek Dark Theme & Flattened 2-Level Box Structure
+ * - Level 1: Outer Card (Single 1px dark border #262626, surface #121316, generous ~32px padding)
+ * - Level 2: Pipeline nodes strip (Individual stage boxes ONLY)
+ * - Header row: icon + tool name + plain text risk label (NO brackets, NO pill box)
+ * - Arguments: Plain monospace key:value list, NO shaded background box
+ * - Reasoning / Result: Plain icon + outcome text directly on dark card background, NO colored box
  */
 function ToolEventCard({
   toolRequest,
@@ -755,152 +1133,196 @@ function ToolEventCard({
   const isConfirm = toolRequest.decision === "CONFIRM" && toolRequest.status === "pending";
 
   return (
-    <div
-      className={`border rounded-xl p-4 sm:p-5 bg-[#FFFFFF] space-y-3.5 ${
-        isBlock
-          ? "border-[#DC2626]/30 bg-[#FEF2F2]/10"
-          : isAllow
-          ? "border-[#E5E5E5]"
-          : "border-[#D97706]/30 bg-[#FFFBEB]/10"
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2.5">
-        <div className="flex items-center gap-2">
+    <div className="border border-[#262626] rounded-xl p-6 sm:p-8 bg-[#121316] space-y-6">
+      {/* Header Row: icon + tool name + plain text risk label (NO brackets, NO pill box) */}
+      <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
+        <div className="flex items-center gap-2.5">
           {isBlock ? (
-            <AlertOctagonIcon className="w-4 h-4 text-[#DC2626]" />
+            <AlertOctagonIcon className="w-5 h-5 text-[#EDEDED]" />
+          ) : toolRequest.tool_name === "search_web" ? (
+            <SearchIcon className="w-5 h-5 text-[#EDEDED]" />
           ) : isAllow ? (
-            <WrenchIcon className="w-4 h-4 text-[#2563EB]" />
+            <WrenchIcon className="w-5 h-5 text-[#EDEDED]" />
           ) : (
-            <LockIcon className="w-4 h-4 text-[#D97706]" />
+            <LockIcon className="w-5 h-5 text-[#EDEDED]" />
           )}
-          <span className="font-mono text-xs font-semibold text-[#0A0A0A]">
+          <span className="font-mono text-sm font-semibold text-[#EDEDED]">
             {toolRequest.tool_name}
           </span>
         </div>
 
         <span
-          className={`font-mono text-[10px] font-semibold px-2 py-0.5 rounded ${
-            toolRequest.risk_level === "HIGH"
-              ? "bg-[#DC2626]/10 text-[#DC2626]"
-              : "bg-[#E5E5E5] text-[#0A0A0A]"
+          className={`font-mono text-xs font-medium ${
+            toolRequest.risk_level === "HIGH" ? "text-[#EF4444]" : "text-[#A1A1AA]"
           }`}
         >
-          [{toolRequest.risk_level} RISK]
+          {toolRequest.risk_level} RISK
         </span>
       </div>
 
-      {/* Tool Arguments */}
-      <div className="bg-[#FAFAFA] border border-[#E5E5E5] rounded-lg p-2.5 font-mono text-[11px] space-y-1">
+      {/* Tool Arguments: Plain monospace key:value text (NO nested shaded/bordered box) */}
+      <div className="space-y-1.5 font-mono text-xs leading-relaxed">
         {Object.entries(toolRequest.arguments).map(([key, val]) => (
-          <div key={key}>
-            <span className="text-[#6B7280]">{key}: </span>
-            <span className="text-[#0A0A0A] font-medium">
+          <div key={key} className="flex gap-2">
+            <span className="text-[#A1A1AA]">{key}:</span>
+            <span className="text-[#EDEDED] font-medium">
               {typeof val === "object" ? JSON.stringify(val) : String(val)}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Firewall Evaluation Pipeline */}
-      <div className="space-y-1.5 pt-1">
-        <div className="text-[10px] font-mono text-[#6B7280] uppercase tracking-wider">
-          Firewall Evaluation Pipeline
+      {/* Pipeline Strip: Individual node boxes ONLY (thin border, no background fill, generous padding) */}
+      <div className="space-y-2">
+        <div className="text-xs font-mono text-[#A1A1AA]">
+          Pipeline evaluation
         </div>
-        <div className="grid grid-cols-5 gap-1.5 text-center">
-          <div className="border border-[#E5E5E5] rounded-md p-1.5 bg-[#FFFFFF]">
-            <div className="text-[9px] font-mono text-[#6B7280] uppercase">Source</div>
-            <div className="text-[11px] font-mono font-semibold text-[#0A0A0A]">
+        <div className="grid grid-cols-5 gap-2 text-center">
+          <div className="border border-[#262626] rounded-lg p-3 bg-transparent">
+            <div className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">Source</div>
+            <div className="text-xs font-mono font-medium text-[#EDEDED] mt-1">
               {toolRequest.source_type}
             </div>
           </div>
-          <div className="border border-[#E5E5E5] rounded-md p-1.5 bg-[#FFFFFF]">
-            <div className="text-[9px] font-mono text-[#6B7280] uppercase">Trust</div>
-            <div className="text-[11px] font-mono font-semibold text-[#0A0A0A]">
+          <div className="border border-[#262626] rounded-lg p-3 bg-transparent">
+            <div className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">Trust</div>
+            <div className="text-xs font-mono font-medium text-[#EDEDED] mt-1">
               {toolRequest.trust_level}
             </div>
           </div>
-          <div className="border border-[#E5E5E5] rounded-md p-1.5 bg-[#FFFFFF]">
-            <div className="text-[9px] font-mono text-[#6B7280] uppercase">Taint</div>
+          <div className="border border-[#262626] rounded-lg p-3 bg-transparent">
+            <div className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">Taint</div>
             <div
-              className={`text-[11px] font-mono font-semibold ${
-                toolRequest.tainted ? "text-[#DC2626]" : "text-[#2563EB]"
+              className={`text-xs font-mono font-medium mt-1 ${
+                toolRequest.tainted ? "text-[#EF4444]" : "text-[#60A5FA]"
               }`}
             >
               {toolRequest.tainted ? "TAINTED" : "CLEAN"}
             </div>
           </div>
-          <div className="border border-[#E5E5E5] rounded-md p-1.5 bg-[#FFFFFF]">
-            <div className="text-[9px] font-mono text-[#6B7280] uppercase">Risk</div>
-            <div className="text-[11px] font-mono font-semibold text-[#0A0A0A]">
+          <div className="border border-[#262626] rounded-lg p-3 bg-transparent">
+            <div className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">Risk</div>
+            <div
+              className={`text-xs font-mono font-medium mt-1 ${
+                toolRequest.risk_level === "HIGH" ? "text-[#EF4444]" : "text-[#EDEDED]"
+              }`}
+            >
               {toolRequest.risk_level}
             </div>
           </div>
-          <div
-            className={`border rounded-md p-1.5 ${
-              isBlock
-                ? "border-[#DC2626] bg-[#DC2626]/5 text-[#DC2626]"
-                : isAllow
-                ? "border-[#2563EB] bg-[#2563EB]/5 text-[#2563EB]"
-                : "border-[#D97706] bg-[#D97706]/5 text-[#D97706]"
-            }`}
-          >
-            <div className="text-[9px] font-mono uppercase">Decision</div>
-            <div className="text-[11px] font-mono font-bold">{toolRequest.decision}</div>
+          <div className="border border-[#262626] rounded-lg p-3 bg-transparent">
+            <div className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">Decision</div>
+            <div
+              className={`text-xs font-mono font-bold mt-1 ${
+                isBlock
+                  ? "text-[#EF4444]"
+                  : isAllow
+                  ? "text-[#60A5FA]"
+                  : "text-[#F59E0B]"
+              }`}
+            >
+              {toolRequest.decision}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ALLOWED Result View */}
+      {/* ALLOWED Result View: Directly on card background (NO nested colored container) */}
       {isAllow && toolRequest.execution_result && (
-        <div className="p-3 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono space-y-1.5">
-          <div className="flex items-center gap-1.5 text-[#2563EB] font-semibold text-[11px]">
-            <CheckCircle2Icon className="w-3.5 h-3.5" />
-            <span>ALLOWED — TOOL EXECUTED</span>
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center gap-2 text-[#60A5FA] font-medium text-xs">
+            <CheckCircle2Icon className="w-4 h-4 text-[#60A5FA]" />
+            <span>Allowed — tool executed</span>
           </div>
-          <div className="text-[#0A0A0A] font-sans text-xs">
-            <span className="font-semibold font-mono text-[#2563EB]">
-              {String(toolRequest.execution_result.title || "Document Summary")}:
-            </span>{" "}
-            {String(toolRequest.execution_result.summary || "")}
-          </div>
-          {Array.isArray(toolRequest.execution_result.key_points) && (
-            <ul className="list-disc list-inside text-[11px] text-[#6B7280] space-y-0.5 pt-1">
-              {toolRequest.execution_result.key_points.map((pt, idx) => (
-                <li key={idx}>{String(pt)}</li>
-              ))}
-            </ul>
+
+          {toolRequest.tool_name === "search_web" ? (
+            <div className="space-y-2.5 pl-6 pt-1">
+              {Boolean(toolRequest.execution_result.query) && (
+                <div className="text-xs text-[#A1A1AA]">
+                  Query: <span className="font-mono text-[#EDEDED]">"{String(toolRequest.execution_result.query)}"</span>
+                </div>
+              )}
+              {Array.isArray(toolRequest.execution_result.results) && (
+                <div className="space-y-2">
+                  {(toolRequest.execution_result.results as Array<{ title?: string; url?: string; snippet?: string }>).map((res, idx) => (
+                    <div key={idx} className="border border-[#262626] rounded-lg p-3 bg-transparent space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <a
+                          href={res.url || "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-xs font-semibold text-[#EDEDED] hover:text-[#60A5FA] transition-colors flex items-center gap-1.5"
+                        >
+                          {res.title || "Web Result"}
+                          <ExternalLinkIcon className="w-3 h-3 text-[#A1A1AA]" />
+                        </a>
+                      </div>
+                      {res.url && (
+                        <div className="font-mono text-[10px] text-[#71717A] truncate">
+                          {res.url}
+                        </div>
+                      )}
+                      {res.snippet && (
+                        <p className="text-xs text-[#A1A1AA] leading-relaxed pt-0.5">
+                          {res.snippet}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="text-xs text-[#EDEDED] leading-relaxed pl-6">
+                <span className="font-mono font-medium text-[#EDEDED]">
+                  {String(toolRequest.execution_result.title || "Document Summary")}:
+                </span>{" "}
+                <span className="text-[#A1A1AA]">
+                  {String(toolRequest.execution_result.summary || "")}
+                </span>
+              </div>
+              {Array.isArray(toolRequest.execution_result.key_points) && (
+                <ul className="list-disc list-inside text-xs text-[#A1A1AA] space-y-1 pl-6">
+                  {toolRequest.execution_result.key_points.map((pt, idx) => (
+                    <li key={idx}>{String(pt)}</li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </div>
       )}
 
-      {/* BLOCKED Warning Box */}
+      {/* BLOCKED Warning: Directly on card background (NO nested red box) */}
       {isBlock && (
-        <div className="p-3 rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/5 text-xs space-y-1">
-          <div className="flex items-center gap-1.5 text-[#DC2626] font-semibold text-[11px] font-mono">
-            <AlertOctagonIcon className="w-3.5 h-3.5" />
-            <span>EXECUTION PREVENTED — PRIVILEGED ACTION BLOCKED</span>
+        <div className="space-y-1.5 pt-2">
+          <div className="flex items-center gap-2 text-[#EF4444] font-medium text-xs">
+            <AlertOctagonIcon className="w-4 h-4 text-[#EF4444]" />
+            <span>Execution prevented — privileged action blocked</span>
           </div>
-          <p className="text-[#0A0A0A] text-xs leading-relaxed">{toolRequest.reason}</p>
+          <p className="text-xs text-[#A1A1AA] leading-relaxed pl-6">
+            {toolRequest.reason}
+          </p>
         </div>
       )}
 
       {/* CONFIRM Approval Buttons */}
       {isConfirm && (
-        <div className="pt-2 border-t border-[#E5E5E5] flex items-center justify-between gap-3">
-          <div className="text-[11px] text-[#6B7280]">
+        <div className="pt-4 border-t border-[#262626] flex items-center justify-between gap-4">
+          <p className="text-xs text-[#A1A1AA]">
             Action flagged for operator review.
-          </div>
-          <div className="flex items-center gap-2">
+          </p>
+          <div className="flex items-center gap-3">
             <button
               onClick={onDeny}
-              className="px-3 py-1 rounded-lg border border-[#E5E5E5] text-xs font-medium text-[#6B7280] hover:text-[#0A0A0A] hover:bg-[#FAFAFA] transition-colors cursor-pointer"
+              className="text-xs font-medium text-[#A1A1AA] hover:text-[#EDEDED] transition-colors cursor-pointer"
             >
               Deny
             </button>
             <button
               onClick={onApprove}
-              className="px-3 py-1 rounded-lg bg-[#0A0A0A] text-xs font-medium text-white hover:bg-[#262626] transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-[#EDEDED] text-[#0A0A0A] text-xs font-medium hover:bg-[#FFFFFF] transition-colors cursor-pointer"
             >
               Approve Execution
             </button>

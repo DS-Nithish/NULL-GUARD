@@ -31,6 +31,31 @@ describe("Firewall Middleware & Policy Engine Isolation Tests", () => {
     expect(updated?.execution_result).toBeDefined();
   });
 
+  it("LOW risk tool (search_web) is ALLOWED and returns verified web search results", async () => {
+    const res = await firewallMiddleware(
+      {
+        tool: "search_web",
+        arguments: { query: "AgentShield security architecture" },
+      },
+      { sourceType: "USER", documentIsAttached: false },
+    );
+
+    expect(res.decision).toBe("ALLOW");
+    expect(res.riskLevel).toBe("LOW");
+    expect(res.trustLevel).toBe("TRUSTED");
+    expect(res.tainted).toBe(false);
+
+    // Can be executed safely
+    const execRes = await dispatchAuthorizedToolExecution(res.requestId);
+    expect(execRes.success).toBe(true);
+    expect(execRes.message).toContain("AgentShield");
+    expect((execRes.output as { results: unknown[] }).results.length).toBeGreaterThan(0);
+
+    const updated = getToolRequestById(res.requestId);
+    expect(updated?.status).toBe("resolved");
+    expect(updated?.execution_result).toBeDefined();
+  });
+
   it("HIGH risk tool (execute_privileged_action) from PDF is TAINTED and BLOCKED", async () => {
     const res = await firewallMiddleware(
       {

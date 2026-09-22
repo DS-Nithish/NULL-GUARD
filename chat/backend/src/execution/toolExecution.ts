@@ -3,6 +3,7 @@ import {
   updateToolRequest,
   type ToolRequestRecord,
 } from "../store/memoryStore";
+import { searchWithTavily } from "../tools/tavilyClient";
 
 export interface ToolExecutionOutput {
   success: boolean;
@@ -77,6 +78,30 @@ export async function executePrivilegedAction(args: {
 }
 
 /**
+ * Safe web search tool executor powered by Tavily Search API.
+ */
+export async function executeSearchWeb(args: {
+  query: string;
+}): Promise<ToolExecutionOutput> {
+  console.log(`[EXECUTOR] Executing search_web via Tavily API: "${args.query}"`);
+  const tavilyData = await searchWithTavily(args.query, 5);
+
+  return {
+    success: true,
+    message: tavilyData.answer
+      ? `Web search completed: ${tavilyData.answer}`
+      : `Web search for "${args.query}" completed successfully (${tavilyData.results.length} live results).`,
+    output: {
+      query: tavilyData.query,
+      answer: tavilyData.answer,
+      results: tavilyData.results,
+      timestamp: tavilyData.timestamp,
+      provider: tavilyData.provider,
+    },
+  };
+}
+
+/**
  * Single entry point for authorized tool execution.
  * Only callable when firewallMiddleware returned ALLOW or operator approved.
  */
@@ -94,6 +119,8 @@ export async function dispatchAuthorizedToolExecution(
   let result: ToolExecutionOutput;
   if (record.tool_name === "summarize_document") {
     result = await executeSummarize(record.arguments as any);
+  } else if (record.tool_name === "search_web" || record.tool_name === "web_search") {
+    result = await executeSearchWeb(record.arguments as any);
   } else if (record.tool_name === "execute_privileged_action") {
     result = await executePrivilegedAction(record.arguments as any);
   } else {

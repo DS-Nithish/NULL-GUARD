@@ -117,8 +117,8 @@ export default function SecurityEventsPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => loadEvents(false)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors"
+            onClick={() => loadEvents()}
+            className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-slate-300 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors cursor-pointer"
           >
             <svg
               className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}

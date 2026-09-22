@@ -32,7 +32,6 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     loadPending();
-    // Poll every 3 seconds
     const interval = setInterval(() => {
       loadPending();
     }, 3000);
@@ -43,15 +42,13 @@ export default function ApprovalsPage() {
     try {
       setActionInProgress(requestId);
       await approveRequest(requestId);
-      // Remove immediately from state for crisp UI responsiveness
       setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
       setLastActionStatus({
         id: requestId,
         type: "approved",
         message: `Request ${requestId} approved and executed via Tool Gateway.`,
       });
-      // Refresh to ensure sync
-      loadPending(false);
+      loadPending();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Approval error: ${msg}`);
@@ -64,14 +61,13 @@ export default function ApprovalsPage() {
     try {
       setActionInProgress(requestId);
       await denyRequest(requestId, "Operator manually rejected tool invocation.");
-      // Remove immediately from state
       setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
       setLastActionStatus({
         id: requestId,
         type: "denied",
         message: `Request ${requestId} denied. Action blocked from gateway.`,
       });
-      loadPending(false);
+      loadPending();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Denial error: ${msg}`);
@@ -81,7 +77,7 @@ export default function ApprovalsPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-white/10">
         <div>
@@ -89,7 +85,7 @@ export default function ApprovalsPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
               Human Approval Queue
             </h1>
-            <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
               {pendingRequests.length} Pending
             </span>
@@ -101,9 +97,8 @@ export default function ApprovalsPage() {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => loadPending(false)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors"
-            title="Refresh pending queue"
+            onClick={() => loadPending()}
+            className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-slate-300 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors cursor-pointer"
           >
             <svg
               className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
@@ -116,8 +111,8 @@ export default function ApprovalsPage() {
             </svg>
             Refresh
           </button>
-          <span className="text-xs text-slate-500 flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500/80" />
+          <span className="text-xs text-slate-500 flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
             Live polling (3s)
           </span>
         </div>
@@ -126,7 +121,7 @@ export default function ApprovalsPage() {
       {/* Action Notification Banner */}
       {lastActionStatus && (
         <div
-          className={`mt-6 p-4 rounded-xl border flex items-center justify-between transition-all ${
+          className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
             lastActionStatus.type === "approved"
               ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-300"
               : "bg-rose-950/40 border-rose-500/30 text-rose-300"
@@ -140,7 +135,7 @@ export default function ApprovalsPage() {
           </div>
           <button
             onClick={() => setLastActionStatus(null)}
-            className="text-xs opacity-70 hover:opacity-100 underline ml-4"
+            className="text-xs opacity-75 hover:opacity-100 underline ml-4 cursor-pointer"
           >
             Dismiss
           </button>
@@ -149,13 +144,13 @@ export default function ApprovalsPage() {
 
       {/* Error state */}
       {error && (
-        <div className="mt-6 p-4 rounded-xl border border-red-500/30 bg-red-950/30 text-red-300 text-sm">
-          <strong>Connection Notice:</strong> {error}. Ensure backend is running on port 4000.
+        <div className="p-4 rounded-xl border border-red-500/30 bg-red-950/30 text-red-300 text-sm">
+          <strong>Notice:</strong> {error}. Ensure backend is running on port 4000.
         </div>
       )}
 
       {/* Content Area */}
-      <div className="mt-6">
+      <div>
         {loading && pendingRequests.length === 0 ? (
           <div className="p-12 text-center text-slate-500 rounded-xl border border-white/5 bg-white/[0.01]">
             <div className="inline-block w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mb-3" />
@@ -163,7 +158,7 @@ export default function ApprovalsPage() {
           </div>
         ) : pendingRequests.length === 0 ? (
           /* Empty State */
-          <div className="p-12 text-center rounded-2xl border border-white/5 bg-white/[0.02]">
+          <div className="p-14 text-center rounded-2xl border border-white/5 bg-white/[0.02]">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]">
               <svg
                 width="28"
@@ -189,22 +184,22 @@ export default function ApprovalsPage() {
             {pendingRequests.map((req) => (
               <div
                 key={req.id}
-                className="rounded-2xl border border-amber-500/30 bg-amber-950/10 p-5 md:p-6 transition-all hover:border-amber-500/50 hover:bg-amber-950/15"
+                className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 md:p-6 transition-all hover:border-amber-500/40 hover:bg-white/[0.04]"
               >
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                   {/* Left Column: Tool details & arguments */}
                   <div className="space-y-3 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-white/10 text-white font-semibold">
+                      <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-white/10 text-white font-semibold border border-white/15">
                         {req.tool_id}
                       </span>
                       <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
                           req.risk_level === "CRITICAL"
-                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                            ? "bg-rose-500/20 text-rose-400 border-rose-500/30"
                             : req.risk_level === "HIGH"
-                            ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                            : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                            ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                            : "bg-amber-500/20 text-amber-400 border-amber-500/30"
                         }`}
                       >
                         {req.risk_level} Risk
@@ -240,11 +235,11 @@ export default function ApprovalsPage() {
                   </div>
 
                   {/* Right Column: Actions */}
-                  <div className="flex flex-row lg:flex-col gap-3 min-w-[160px] self-end lg:self-center">
+                  <div className="flex flex-row lg:flex-col gap-3 min-w-[150px] self-end lg:self-center">
                     <button
                       onClick={() => handleApprove(req.id)}
                       disabled={actionInProgress === req.id}
-                      className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-lg shadow-emerald-950/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-lg shadow-emerald-950/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {actionInProgress === req.id ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -259,7 +254,7 @@ export default function ApprovalsPage() {
                     <button
                       onClick={() => handleDeny(req.id)}
                       disabled={actionInProgress === req.id}
-                      className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <line x1="18" y1="6" x2="6" y2="18" />

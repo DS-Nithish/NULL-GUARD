@@ -47,10 +47,9 @@ function Layout() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                  isActive
-                    ? "bg-[var(--color-shield-600)]/15 text-[var(--color-shield-400)]"
-                    : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
+                `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
+                  ? "bg-[var(--color-shield-600)]/15 text-[var(--color-shield-400)]"
+                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200"
                 }`
               }
             >

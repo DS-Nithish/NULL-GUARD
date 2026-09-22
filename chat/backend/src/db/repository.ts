@@ -35,6 +35,12 @@ export function createConversation(id: string): { id: string; created_at: string
   return { id, created_at: now };
 }
 
+export function getConversationById(id: string): { id: string; created_at: string } | null {
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM conversations WHERE id = ?").get(id);
+  return (row as { id: string; created_at: string }) || null;
+}
+
 export function insertToolRequest(req: {
   id: string;
   conversation_id: string;

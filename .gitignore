@@ -20,3 +20,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Sensitive OAuth and Tokens (DO NOT COMMIT)
+credentials.json
+token.json
+secrets/
+**/secrets/
+**/credentials.json
+**/token.json

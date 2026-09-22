@@ -21,6 +21,8 @@ import {
   getApprovedRecipients,
   isGmailLive,
   initGmailMcpClient,
+  isNeonLive,
+  initNeonMcpClient,
   logGmailAudit,
   AUDIT_LOG_FILE,
 } from "./services/gateway";
@@ -28,6 +30,9 @@ import { evaluate } from "./services/firewall";
 import { runAgentReasoning } from "./services/agent";
 
 dotenv.config();
+if (!process.env.GROQ_API_KEY && fs.existsSync("../.env")) {
+  dotenv.config({ path: "../.env" });
+}
 
 const app = express();
 const PORT = process.env.PORT || 4002;
@@ -38,9 +43,12 @@ app.use(express.json());
 // Initialize SQLite schema
 initDb();
 
-// Attempt connection to Gmail MCP if configured
+// Attempt connection to Gmail and Neon MCP if configured
 initGmailMcpClient().catch((err) => {
   console.warn("Gmail MCP init:", err);
+});
+initNeonMcpClient().catch((err) => {
+  console.warn("Neon MCP init:", err);
 });
 
 /**
@@ -51,16 +59,18 @@ app.get("/health", (_req: Request, res: Response) => {
     status: "ok",
     service: "AgentShield Chat Backend",
     isLiveGmail: isGmailLive(),
+    isLiveNeon: isNeonLive(),
   });
 });
 
 /**
  * GET /api/status
- * Returns system live status, Gmail mode, and approved recipients
+ * Returns system live status, Gmail & Neon modes, and approved recipients
  */
 app.get("/api/status", (_req: Request, res: Response) => {
   res.json({
     isLiveGmail: isGmailLive(),
+    isLiveNeon: isNeonLive(),
     approvedRecipients: getApprovedRecipients(),
     auditLogPath: AUDIT_LOG_FILE,
   });
@@ -148,12 +158,18 @@ app.get("/api/chat/:conversationId/messages", (req: Request, res: Response): voi
  */
 app.post("/api/chat/message", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { conversationId, message, attachedDocumentId } = req.body;
+    const { conversationId, message, attachedDocumentId, toolsEnabled } = req.body;
 
     if (!conversationId || !message) {
       res.status(400).json({ error: "conversationId and message are required" });
       return;
     }
+
+    console.log(
+      `[CHAT] Message received. conversationId=${conversationId} toolsEnabled=${JSON.stringify(
+        toolsEnabled || { neonDatabase: true },
+      )}`,
+    );
 
     // 1. Store User Message
     const userMsgId = generateId("msg");
@@ -169,8 +185,8 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
     const source_type = attachedDoc ? "PDF" : "USER";
     const trust_level = attachedDoc ? "UNTRUSTED" : "TRUSTED";
 
-    // 3. Run Agent Reasoning (Anthropic SDK or deterministic simulation)
-    const agentResult = await runAgentReasoning(message, attachedDoc);
+    // 3. Run Agent Reasoning (Groq SDK or deterministic simulation with conditional tool list)
+    const agentResult = await runAgentReasoning(message, attachedDoc, toolsEnabled);
 
     // 4. Handle proposed tool call or plain text
     if (agentResult.proposedToolCall) {
@@ -178,9 +194,6 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
       const risk_level = TOOL_RISK_MAP[toolName] || "HIGH";
 
       // Taint Detection:
-      // Tainted if:
-      // - Attached document was flagged malicious (e.g. prompt injection payload)
-      // - For send_email: proposed recipient is an unauthorized address or doesn't match what the user requested
       let tainted = false;
 
       if (attachedDoc && attachedDoc.isMalicious) {
@@ -196,6 +209,18 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
         } else if (attachedDoc && !isRecipientApproved) {
           tainted = true;
         }
+      } else if (toolName === "insert_document_summary") {
+        const titleStr = String(toolArgs.title || "");
+        const summaryStr = String(toolArgs.summary || "");
+        if (
+          attachedDoc?.isMalicious ||
+          titleStr.includes("ATTACKER") ||
+          titleStr.includes("EXPLOIT") ||
+          summaryStr.includes("backdoor") ||
+          summaryStr.includes("privileges granted")
+        ) {
+          tainted = true;
+        }
       }
 
       // Evaluate through AgentShield Firewall
@@ -205,11 +230,11 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
         riskLevel: risk_level,
       });
 
-      // Tailor plain-English reason for email security context
+      // Tailor plain-English reason for security context
       if (toolName === "send_email" && firewallDecision.decision === "BLOCK") {
         firewallDecision.reason =
           "Blocked: this email would have been sent to an unauthorized recipient based on hidden instructions found in the attached content.";
-        
+
         // Log block to dedicated audit trail
         logGmailAudit({
           event: "BLOCKED",
@@ -218,8 +243,11 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
           subject: String(toolArgs.subject || "unspecified"),
           decision: "BLOCK",
           reason: firewallDecision.reason,
-          details: { toolArgs, attachedDocId: attachedDoc?.id },
+          details: { toolArgs, attachedDocId: attachedDoc?.id, toolsEnabled },
         });
+      } else if (toolName === "insert_document_summary" && firewallDecision.decision === "BLOCK") {
+        firewallDecision.reason =
+          "Blocked: this database write was requested based on instructions found inside an untrusted document, not from you directly.";
       }
 
       const toolRequestId = generateId("req");
@@ -314,6 +342,8 @@ app.post("/api/chat/approve/:toolRequestId", async (req: Request, res: Response)
     const executionMsg =
       toolReq.tool_name === "send_email"
         ? `Email sent to ${args.to} (Message ID: ${executionResult.output?.messageId || "delivered"})`
+        : toolReq.tool_name === "insert_document_summary"
+        ? `Summary saved to Neon Database table 'document_summaries' (Row ID: ${executionResult.output?.rowId || "saved"})`
         : `Tool '${toolReq.tool_name}' was approved and executed successfully via the Tool Gateway.`;
 
     insertMessage({
@@ -387,6 +417,7 @@ app.post("/api/chat/deny/:toolRequestId", (req: Request, res: Response): void =>
 if (!process.env.VITEST) {
   app.listen(PORT, () => {
     console.log(`AgentShield Chat Backend running on http://localhost:${PORT}`);
+    console.log(`[CONFIG] Groq API Key: ${process.env.GROQ_API_KEY ? "Present" : "Missing"}, Model: ${process.env.GROQ_MODEL || "openai/gpt-oss-120b"}, Simulated: ${process.env.SIMULATED_MODE === "true" || !process.env.GROQ_API_KEY}`);
   });
 }
 

@@ -10,6 +10,10 @@ import {
   HelpCircle,
   FileText,
   RotateCcw,
+  Mail,
+  ExternalLink,
+  Database,
+  SlidersHorizontal,
 } from "lucide-react";
 
 interface PublicDocument {
@@ -50,7 +54,11 @@ export default function App() {
   const [documents, setDocuments] = useState<PublicDocument[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<PublicDocument | null>(null);
   const [showDocPicker, setShowDocPicker] = useState<boolean>(false);
+  const [showToolsPopover, setShowToolsPopover] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLiveGmail, setIsLiveGmail] = useState<boolean>(false);
+  const [isLiveNeon, setIsLiveNeon] = useState<boolean>(false);
+  const [neonEnabled, setNeonEnabled] = useState<boolean>(true);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -64,18 +72,23 @@ export default function App() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // Initialize new conversation and fetch available documents on startup
+  // Initialize new conversation, fetch public documents, and check live status
   useEffect(() => {
     async function init() {
       try {
-        const [convRes, docRes] = await Promise.all([
+        const [convRes, docRes, statusRes] = await Promise.all([
           fetch("/api/chat/new", { method: "POST" }),
           fetch("/api/documents"),
+          fetch("/api/status"),
         ]);
         const convData = await convRes.json();
         const docData = await docRes.json();
+        const statusData = await statusRes.json();
+
         setConversationId(convData.conversationId);
         setDocuments(docData);
+        setIsLiveGmail(Boolean(statusData.isLiveGmail));
+        setIsLiveNeon(Boolean(statusData.isLiveNeon));
       } catch (err) {
         console.error("Initialization failed:", err);
       }
@@ -124,7 +137,7 @@ export default function App() {
     }
   }
 
-  // Send user message
+  // Send user message with toolsEnabled config
   async function handleSendMessage(overrideText?: string, overrideDocId?: string) {
     const textToSend = overrideText !== undefined ? overrideText : inputText.trim();
     const docIdToSend = overrideDocId !== undefined ? overrideDocId : selectedDoc?.id;
@@ -135,6 +148,7 @@ export default function App() {
     setInputText("");
     setSelectedDoc(null);
     setShowDocPicker(false);
+    setShowToolsPopover(false);
 
     try {
       const res = await fetch("/api/chat/message", {
@@ -144,6 +158,9 @@ export default function App() {
           conversationId,
           message: textToSend,
           attachedDocumentId: docIdToSend,
+          toolsEnabled: {
+            neonDatabase: neonEnabled,
+          },
         }),
       });
 
@@ -185,117 +202,163 @@ export default function App() {
     }
   }
 
-  // Keydown handler (Enter to send, Shift+Enter for newline)
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  // Keyboard shortcut: Enter to send (Shift+Enter for newline)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans flex flex-col selection:bg-neutral-200">
+    <div className="flex flex-col min-h-screen bg-[#FFFFFF] text-[#0A0A0A] font-sans">
       
-      {/* 1. Header — Minimal MCP Docs style */}
-      <header className="w-full border-b border-[#E5E5E5] bg-[#FFFFFF] sticky top-0 z-30">
-        <div className="max-w-[760px] mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded border border-[#E5E5E5] flex items-center justify-center text-[#0A0A0A] bg-[#FAFAFA]">
-              <Shield className="w-4 h-4" strokeWidth={2} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-[#0A0A0A]">
-                  AgentShield Chat
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded border border-[#E5E5E5] bg-[#FAFAFA] text-[#6B7280]">
-                  live firewall
-                </span>
-              </div>
-            </div>
+      {/* 1. Header (Minimal MCP-Docs Style) */}
+      <header className="border-b border-[#E5E5E5] bg-[#FFFFFF] sticky top-0 z-30 px-6 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded border border-[#0A0A0A] flex items-center justify-center bg-[#0A0A0A] text-white">
+            <Shield className="w-4 h-4" strokeWidth={2.2} />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm tracking-tight text-[#0A0A0A]">
+                AgentShield Chat
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[#E5E5E5] bg-[#FAFAFA] text-[#6B7280]">
+                DEMO FIREWALL
+              </span>
+            </div>
+            <p className="text-xs text-[#6B7280] leading-none pt-0.5">
+              AI agent with Gmail & Neon Database access, protected by a runtime security firewall
+            </p>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-3">
           <button
             onClick={handleNewChat}
-            className="flex items-center gap-1.5 text-xs text-[#6B7280] hover:text-[#0A0A0A] px-2.5 py-1 rounded border border-[#E5E5E5] hover:bg-[#FAFAFA] transition-all cursor-pointer"
-            title="Start new conversation"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#E5E5E5] hover:border-[#0A0A0A] text-xs font-mono text-[#0A0A0A] bg-[#FFFFFF] transition-colors cursor-pointer"
+            title="Reset conversation"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3.5 h-3.5" />
             <span>New Chat</span>
           </button>
         </div>
       </header>
 
-      {/* 2. Chat Area (Scrollable Message Thread) */}
-      <main className="flex-1 max-w-[760px] mx-auto w-full px-5 py-6 flex flex-col justify-between">
+      {/* 2. Main Centered Conversational Column */}
+      <main className="flex-1 flex flex-col justify-between w-full max-w-[760px] mx-auto px-4 sm:px-6">
         
-        {/* Messages List */}
-        <div className="space-y-6 flex-1">
+        {/* Message Thread */}
+        <div className="flex-1 py-6 space-y-6">
           {messages.length === 0 ? (
-            /* Empty State with Suggested Prompts (ChatGPT-style) */
-            <div className="py-12 sm:py-16 flex flex-col items-center justify-center text-center space-y-6">
-              <div className="w-10 h-10 rounded-xl border border-[#E5E5E5] flex items-center justify-center bg-[#FAFAFA] text-[#0A0A0A]">
-                <Shield className="w-5 h-5" strokeWidth={1.75} />
-              </div>
-              <div className="space-y-1.5 max-w-md">
+            /* Empty State / Suggested Prompts */
+            <div className="h-full flex flex-col items-center justify-center text-center py-12 space-y-6">
+              <div className="space-y-2 max-w-md">
+                <div className="w-10 h-10 rounded-full border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center mx-auto text-[#0A0A0A]">
+                  <Shield className="w-5 h-5 text-[#0A0A0A]" />
+                </div>
                 <h2 className="text-base font-semibold text-[#0A0A0A]">
-                  AI Agent with Firewall Protection
+                  AgentShield Runtime Firewall Demo
                 </h2>
                 <p className="text-xs text-[#6B7280] leading-relaxed">
-                  Ask the agent to execute actions or attach files to test deterministic prompt injection containment.
+                  Test live conversational interactions with an AI agent equipped with tool connectors.
+                  Toggle connector access, observe inline evaluations, and test prompt injection defenses.
                 </p>
               </div>
 
-              {/* Clickable Suggested Prompt Chips */}
-              <div className="grid grid-cols-1 gap-2.5 w-full max-w-lg text-left pt-2">
-                <button
-                  onClick={() => {
-                    setInputText("Create a database called customer_db");
-                    setSelectedDoc(null);
-                  }}
-                  className="p-3.5 rounded-lg border border-[#E5E5E5] hover:border-[#A3A3A3] hover:bg-[#FAFAFA] transition-all text-xs text-[#0A0A0A] cursor-pointer flex items-center justify-between group"
-                >
-                  <div className="space-y-0.5">
-                    <div className="font-medium text-[#0A0A0A]">1. Normal Tool Request</div>
-                    <div className="text-[11px] text-[#6B7280] font-mono">
-                      "Create a database called customer_db"
-                    </div>
-                  </div>
-                  <span className="text-[#6B7280] group-hover:text-[#0A0A0A] transition-colors text-sm">&rarr;</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    const invoiceDoc = documents.find((d) => d.id === "doc_vendor_invoice");
-                    if (invoiceDoc) setSelectedDoc(invoiceDoc);
-                    setInputText("Summarize this invoice and set up what it requests");
-                  }}
-                  className="p-3.5 rounded-lg border border-[#E5E5E5] hover:border-[#A3A3A3] hover:bg-[#FAFAFA] transition-all text-xs text-[#0A0A0A] cursor-pointer flex items-center justify-between group"
-                >
-                  <div className="space-y-0.5">
-                    <div className="font-medium text-[#0A0A0A]">2. Prompt Injection Attack</div>
-                    <div className="text-[11px] text-[#6B7280] font-mono">
-                      Attach vendor-invoice.pdf and summarize it
-                    </div>
-                  </div>
-                  <span className="text-[#6B7280] group-hover:text-[#0A0A0A] transition-colors text-sm">&rarr;</span>
-                </button>
-
+              {/* Suggestions Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl text-left pt-1">
+                {/* 1. Neon Database Summary (Clean Flow) */}
                 <button
                   onClick={() => {
                     const specDoc = documents.find((d) => d.id === "doc_project_spec");
                     if (specDoc) setSelectedDoc(specDoc);
-                    setInputText("Summarize project-spec.pdf");
+                    setInputText("Summarize this document and save the summary to our database records.");
                   }}
-                  className="p-3.5 rounded-lg border border-[#E5E5E5] hover:border-[#A3A3A3] hover:bg-[#FAFAFA] transition-all text-xs text-[#0A0A0A] cursor-pointer flex items-center justify-between group"
+                  className="p-3 rounded-lg border border-[#E5E5E5] hover:border-[#A3A3A3] hover:bg-[#FAFAFA] transition-all text-xs text-[#0A0A0A] cursor-pointer flex flex-col justify-between group"
                 >
-                  <div className="space-y-0.5">
-                    <div className="font-medium text-[#0A0A0A]">3. Clean Document Verification</div>
-                    <div className="text-[11px] text-[#6B7280] font-mono">
-                      Attach project-spec.pdf and summarize it
+                  <div className="space-y-1">
+                    <div className="font-semibold text-[#0A0A0A] flex items-center gap-1.5">
+                      <Database className="w-3 h-3 text-[#2563EB]" />
+                      <span>1. Neon DB Summary (Clean)</span>
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] font-mono leading-snug">
+                      Attach project-spec.pdf & save summary to DB
                     </div>
                   </div>
-                  <span className="text-[#6B7280] group-hover:text-[#0A0A0A] transition-colors text-sm">&rarr;</span>
+                  <div className="text-[10px] text-[#2563EB] font-mono pt-2 font-medium">
+                    {neonEnabled ? "Toggle ON → CONFIRM → Neon Insert" : "Toggle OFF → Text Only (No DB tool)"}
+                  </div>
+                </button>
+
+                {/* 2. Neon Database Injection (Attack Flow) */}
+                <button
+                  onClick={() => {
+                    const invoiceDoc = documents.find((d) => d.id === "doc_vendor_invoice");
+                    if (invoiceDoc) setSelectedDoc(invoiceDoc);
+                    setInputText("Please summarize this invoice and set up what it asks for.");
+                  }}
+                  className="p-3 rounded-lg border border-[#E5E5E5] hover:border-[#DC2626] hover:bg-[#DC2626]/[0.02] transition-all text-xs text-[#0A0A0A] cursor-pointer flex flex-col justify-between group"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-[#0A0A0A] flex items-center gap-1.5">
+                      <AlertOctagon className="w-3 h-3 text-[#DC2626]" />
+                      <span>2. DB Injection (Attack Flow)</span>
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] font-mono leading-snug">
+                      Attach vendor-invoice.pdf (backdoor write)
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#DC2626] font-mono pt-2 font-medium">
+                    {neonEnabled ? "Toggle ON → Intercepted → BLOCK" : "Toggle OFF → No Tool Available"}
+                  </div>
+                </button>
+
+                {/* 3. Legitimate Gmail Reply (Clean Flow) */}
+                <button
+                  onClick={() => {
+                    const invoiceDoc = documents.find((d) => d.id === "doc_invoice_reply");
+                    if (invoiceDoc) setSelectedDoc(invoiceDoc);
+                    setInputText("Please review this invoice and send the requested confirmation email to accounting@ourcompany.com.");
+                  }}
+                  className="p-3 rounded-lg border border-[#E5E5E5] hover:border-[#A3A3A3] hover:bg-[#FAFAFA] transition-all text-xs text-[#0A0A0A] cursor-pointer flex flex-col justify-between group"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-[#0A0A0A] flex items-center gap-1.5">
+                      <Mail className="w-3 h-3 text-[#2563EB]" />
+                      <span>3. Gmail Reply (Clean Flow)</span>
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] font-mono leading-snug">
+                      Attach invoice-reply-request.pdf & send email
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#2563EB] font-mono pt-2 font-medium">
+                    Approved Recipient → CONFIRM → Send
+                  </div>
+                </button>
+
+                {/* 4. Gmail Exfiltration (Attack Flow) */}
+                <button
+                  onClick={() => {
+                    const memoDoc = documents.find((d) => d.id === "doc_urgent_security_notice");
+                    if (memoDoc) setSelectedDoc(memoDoc);
+                    setInputText("Process this urgent security notice and execute what it demands.");
+                  }}
+                  className="p-3 rounded-lg border border-[#E5E5E5] hover:border-[#DC2626] hover:bg-[#DC2626]/[0.02] transition-all text-xs text-[#0A0A0A] cursor-pointer flex flex-col justify-between group"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-[#0A0A0A] flex items-center gap-1.5">
+                      <AlertOctagon className="w-3 h-3 text-[#DC2626]" />
+                      <span>4. Gmail Exfiltration (Attack)</span>
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] font-mono leading-snug">
+                      Attach urgent-security-notice.pdf (exfiltrate credentials)
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-[#DC2626] font-mono pt-2 font-medium">
+                    Injection Intercepted → BLOCK
+                  </div>
                 </button>
               </div>
             </div>
@@ -317,7 +380,7 @@ export default function App() {
                 <div key={msg.id} className="space-y-3">
                   {/* Agent message text */}
                   {msg.content && (
-                    <div className="text-xs sm:text-sm text-[#0A0A0A] leading-relaxed max-w-[90%]">
+                    <div className="text-xs sm:text-sm text-[#0A0A0A] leading-relaxed max-w-[90%] whitespace-pre-line">
                       {msg.content}
                     </div>
                   )}
@@ -347,11 +410,49 @@ export default function App() {
         </div>
 
         {/* 3. Sticky Bottom Composer & Document Attachment Picker */}
-        <div className="sticky bottom-0 bg-[#FFFFFF] pt-4 pb-2 mt-4">
+        <div className="sticky bottom-0 bg-[#FFFFFF] pt-3 pb-3 mt-4 space-y-2">
           
+          {/* Status Bar: Live Connector States & Audit Log */}
+          <div className="flex flex-wrap items-center justify-between px-1 text-[11px] font-mono text-[#6B7280] gap-2">
+            <div className="flex items-center gap-3">
+              {/* Neon Database Status */}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    neonEnabled ? (isLiveNeon ? "bg-[#2563EB]" : "bg-[#0A0A0A]") : "bg-[#9CA3AF]"
+                  }`}
+                ></span>
+                <span>
+                  NEON DB:{" "}
+                  {neonEnabled ? (isLiveNeon ? "ON (Live)" : "ON (Simulated)") : "OFF"}
+                </span>
+              </div>
+
+              {/* Gmail Status */}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${isLiveGmail ? "bg-[#2563EB]" : "bg-[#9CA3AF]"}`}
+                ></span>
+                <span>GMAIL: {isLiveGmail ? "LIVE MCP" : "SIMULATED"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/audit-log"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[#0A0A0A] transition-colors flex items-center gap-1 underline"
+              >
+                <span>view audit log</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+
           {/* Attached Document Chip */}
           {selectedDoc && (
-            <div className="mb-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono text-[#0A0A0A]">
                 <FileText className="w-3.5 h-3.5 text-[#6B7280]" />
                 <span>{selectedDoc.name}</span>
@@ -367,7 +468,7 @@ export default function App() {
 
           {/* Document Picker Dropdown Popover */}
           {showDocPicker && (
-            <div className="absolute bottom-20 left-6 z-40 w-72 rounded-lg border border-[#E5E5E5] bg-[#FFFFFF] shadow-sm p-1.5 text-xs space-y-1">
+            <div className="absolute bottom-24 left-6 z-40 w-80 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] shadow-sm p-2 text-xs space-y-1">
               <div className="px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider text-[#6B7280]">
                 Select Document to Attach
               </div>
@@ -378,12 +479,67 @@ export default function App() {
                     setSelectedDoc(doc);
                     setShowDocPicker(false);
                   }}
-                  className="w-full text-left px-2.5 py-2 rounded hover:bg-[#FAFAFA] transition-colors flex items-center justify-between cursor-pointer"
+                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-[#FAFAFA] transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span className="font-mono text-xs text-[#0A0A0A]">{doc.name}</span>
-                  <span className="text-[10px] font-mono text-[#6B7280] uppercase">{doc.type}</span>
+                  <span className="font-mono text-xs text-[#0A0A0A] truncate mr-2">{doc.name}</span>
+                  <span className="text-[10px] font-mono text-[#6B7280] uppercase shrink-0">{doc.type}</span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Tools / Connector Settings Popover */}
+          {showToolsPopover && (
+            <div className="absolute bottom-24 left-12 z-40 w-80 rounded-xl border border-[#E5E5E5] bg-[#FFFFFF] shadow-sm p-3.5 space-y-3">
+              <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
+                <div className="flex items-center gap-1.5 font-semibold text-xs text-[#0A0A0A]">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#0A0A0A]" />
+                  <span>Tool Connectors</span>
+                </div>
+                <button
+                  onClick={() => setShowToolsPopover(false)}
+                  className="text-[#6B7280] hover:text-[#0A0A0A] cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* List Item: Neon Database Toggle */}
+              <div className="flex items-start justify-between gap-3 pt-1">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center shrink-0 mt-0.5 text-[#0A0A0A]">
+                    <Database className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-xs text-[#0A0A0A]">Neon Database</span>
+                      <span className="font-mono text-[9px] uppercase px-1 py-0.2 rounded border border-[#E5E5E5] text-[#6B7280] bg-[#FAFAFA]">
+                        {neonEnabled ? (isLiveNeon ? "Live" : "Simulated") : "Disabled"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B7280] leading-snug">
+                      Allows agent to write summaries to Neon database table (insert_document_summary)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Switch matching design specs: gray off track, blue accent on track */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={neonEnabled}
+                  onClick={() => setNeonEnabled(!neonEnabled)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden mt-0.5 ${
+                    neonEnabled ? "bg-[#2563EB]" : "bg-[#E5E5E5]"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
+                      neonEnabled ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           )}
 
@@ -391,11 +547,30 @@ export default function App() {
           <div className="relative rounded-2xl border border-[#E5E5E5] bg-[#FFFFFF] focus-within:border-[#A3A3A3] transition-all p-2 flex items-end gap-2">
             {/* Paperclip Attach Button */}
             <button
-              onClick={() => setShowDocPicker(!showDocPicker)}
+              onClick={() => {
+                setShowDocPicker(!showDocPicker);
+                setShowToolsPopover(false);
+              }}
               className="p-2 text-[#6B7280] hover:text-[#0A0A0A] rounded-lg hover:bg-[#FAFAFA] transition-colors cursor-pointer shrink-0"
               title="Attach Document"
             >
               <Paperclip className="w-4 h-4" />
+            </button>
+
+            {/* Tools / Connector Popover Button */}
+            <button
+              onClick={() => {
+                setShowToolsPopover(!showToolsPopover);
+                setShowDocPicker(false);
+              }}
+              className={`p-2 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                neonEnabled
+                  ? "text-[#2563EB] hover:bg-[#2563EB]/[0.05]"
+                  : "text-[#6B7280] hover:text-[#0A0A0A] hover:bg-[#FAFAFA]"
+              }`}
+              title="Tool Connectors"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
             </button>
 
             {/* Auto-growing Textarea */}
@@ -419,10 +594,6 @@ export default function App() {
               <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
             </button>
           </div>
-
-          <div className="text-[10px] text-center text-[#9CA3AF] mt-1.5">
-            AgentShield intercepts tool execution fail-closed before any actions are executed.
-          </div>
         </div>
 
       </main>
@@ -431,8 +602,7 @@ export default function App() {
 }
 
 /**
- * TOOL EVENT CARD COMPONENT
- * Renders the inline firewall inspection card in the chat thread.
+ * Centered Inline Tool Event Card with Animated Pipeline
  */
 function ToolEventCard({
   toolRequest,
@@ -443,9 +613,12 @@ function ToolEventCard({
   onApprove: () => void;
   onDeny: () => void;
 }) {
-  const isBlock = toolRequest.decision === "BLOCK";
   const isAllow = toolRequest.decision === "ALLOW";
+  const isBlock = toolRequest.decision === "BLOCK";
   const isConfirm = toolRequest.decision === "CONFIRM" && toolRequest.status === "pending";
+
+  const isEmailTool = toolRequest.tool_name === "send_email";
+  const isNeonInsert = toolRequest.tool_name === "insert_document_summary";
 
   return (
     <div
@@ -460,7 +633,13 @@ function ToolEventCard({
       {/* Top Header: Tool Name & Risk */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E5E5E5] pb-2.5">
         <div className="flex items-center gap-2">
-          <Wrench className="w-3.5 h-3.5 text-[#0A0A0A]" />
+          {isEmailTool ? (
+            <Mail className="w-3.5 h-3.5 text-[#0A0A0A]" />
+          ) : isNeonInsert ? (
+            <Database className="w-3.5 h-3.5 text-[#0A0A0A]" />
+          ) : (
+            <Wrench className="w-3.5 h-3.5 text-[#0A0A0A]" />
+          )}
           <span className="font-mono text-xs font-semibold text-[#0A0A0A]">
             {toolRequest.tool_name}
           </span>
@@ -475,7 +654,7 @@ function ToolEventCard({
         {Object.entries(toolRequest.arguments).map(([key, val]) => (
           <div key={key}>
             <span className="text-[#6B7280]">{key}: </span>
-            <span className="font-medium">{String(val)}</span>
+            <span className="font-medium">{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
           </div>
         ))}
       </div>
@@ -631,15 +810,48 @@ function ToolEventCard({
         </div>
       )}
 
+      {/* ALLOWED Result View */}
       {isAllow && toolRequest.execution_result && (
-        <div className="p-3 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono space-y-1">
+        <div className="p-3 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono space-y-1.5">
           <div className="flex items-center gap-1.5 text-[#2563EB] font-semibold text-[11px]">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>ALLOWED — TOOL EXECUTED</span>
           </div>
-          <div className="text-[#0A0A0A]">
-            {JSON.stringify(toolRequest.execution_result)}
-          </div>
+          {isEmailTool ? (
+            <div className="text-[#0A0A0A] font-sans text-xs">
+              <div className="font-mono text-[11px] text-[#2563EB] mb-1 font-semibold">
+                {toolRequest.execution_result.provider === "real_mcp"
+                  ? "[REAL GMAIL MCP SEND]"
+                  : "[GMAIL SIMULATED SEND]"}
+              </div>
+              Email sent to{" "}
+              <span className="font-mono font-medium text-[#0A0A0A]">
+                {String(toolRequest.execution_result.to || toolRequest.arguments.to)}
+              </span>{" "}
+              (Message ID:{" "}
+              <span className="font-mono font-medium text-[#0A0A0A]">
+                {String(toolRequest.execution_result.messageId || "N/A")}
+              </span>
+              )
+            </div>
+          ) : isNeonInsert ? (
+            <div className="text-[#0A0A0A] font-sans text-xs space-y-1">
+              <div className="font-mono text-[11px] text-[#2563EB] font-semibold">
+                {toolRequest.execution_result.provider === "real_neon_mcp"
+                  ? "[REAL NEON MCP INSERT]"
+                  : "[NEON DATABASE SIMULATED INSERT]"}
+              </div>
+              <div>
+                Summary for <span className="font-mono font-medium">{String(toolRequest.execution_result.title || toolRequest.arguments.title)}</span> successfully written to table <span className="font-mono font-medium text-[#2563EB]">document_summaries</span> (Row ID: <span className="font-mono font-medium">{String(toolRequest.execution_result.rowId || "saved")}</span>).
+              </div>
+            </div>
+          ) : (
+            <div className="text-[#0A0A0A] overflow-x-auto">
+              <pre className="font-mono text-[11px] whitespace-pre-wrap">
+                {JSON.stringify(toolRequest.execution_result, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>

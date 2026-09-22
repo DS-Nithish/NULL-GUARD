@@ -1,18 +1,114 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Shield,
-  Paperclip,
-  ArrowUp,
-  X,
-  FileText,
-  RotateCcw,
-  CheckCircle2,
-  AlertOctagon,
-  LayoutDashboard,
-  MessageSquare,
-  Wrench,
-  Lock,
-} from "lucide-react";
+
+// --- Zero-Dependency Inline SVG Icons (eliminates all external icon dependencies) ---
+function ShieldIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
+function PaperclipIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function ArrowUpIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function XIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function FileTextIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function RotateCcwIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+function CheckCircle2Icon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function AlertOctagonIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
+function LayoutDashboardIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect width="7" height="9" x="3" y="3" rx="1" />
+      <rect width="7" height="5" x="14" y="3" rx="1" />
+      <rect width="7" height="9" x="14" y="12" rx="1" />
+      <rect width="7" height="5" x="3" y="16" rx="1" />
+    </svg>
+  );
+}
+
+function MessageSquareIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function WrenchIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
+function LockIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
 
 interface PublicDocument {
   id: string;
@@ -182,7 +278,6 @@ export default function App() {
       console.error("Send message error:", err);
     } finally {
       setIsLoading(false);
-      // Refresh dashboard after message
       try {
         const dashRes = await fetch("/api/dashboard");
         if (dashRes.ok) setDashboardData(await dashRes.json());
@@ -227,7 +322,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center">
-              <Shield className="w-4 h-4 text-[#0A0A0A]" />
+              <ShieldIcon className="w-4 h-4 text-[#0A0A0A]" />
             </div>
             <span className="font-semibold text-sm tracking-tight text-[#0A0A0A]">
               AgentShield
@@ -255,7 +350,7 @@ export default function App() {
                   : "text-[#6B7280] hover:text-[#0A0A0A]"
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquareIcon className="w-3.5 h-3.5" />
               <span>Chat</span>
             </button>
             <button
@@ -266,7 +361,7 @@ export default function App() {
                   : "text-[#6B7280] hover:text-[#0A0A0A]"
               }`}
             >
-              <LayoutDashboard className="w-3.5 h-3.5" />
+              <LayoutDashboardIcon className="w-3.5 h-3.5" />
               <span>Live Dashboard</span>
               {dashboardData && dashboardData.stats.total > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-[#E5E5E5] font-mono text-[#0A0A0A]">
@@ -283,7 +378,7 @@ export default function App() {
             className="flex items-center gap-1 px-2.5 py-1 text-xs border border-[#E5E5E5] rounded-md hover:bg-[#FAFAFA] transition-colors text-[#6B7280] hover:text-[#0A0A0A] cursor-pointer"
             title="Reset in-memory session"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcwIcon className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset</span>
           </button>
         </div>
@@ -300,7 +395,7 @@ export default function App() {
                 /* Empty State / Scenario Kickstarters */
                 <div className="h-full min-h-[380px] flex flex-col items-center justify-center text-center space-y-6 my-auto">
                   <div className="w-12 h-12 rounded-2xl border border-[#E5E5E5] bg-[#FAFAFA] flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-[#0A0A0A]" />
+                    <ShieldIcon className="w-6 h-6 text-[#0A0A0A]" />
                   </div>
 
                   <div className="space-y-1.5 max-w-md">
@@ -429,7 +524,7 @@ export default function App() {
                         onClick={() => setShowDocPicker(false)}
                         className="text-[#6B7280] hover:text-[#0A0A0A]"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <XIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -442,7 +537,7 @@ export default function App() {
                           }}
                           className="flex items-start gap-2.5 p-2 rounded-lg border border-[#E5E5E5] hover:border-[#0A0A0A] transition-all text-left cursor-pointer group"
                         >
-                          <FileText className="w-4 h-4 text-[#6B7280] group-hover:text-[#0A0A0A] shrink-0 mt-0.5" />
+                          <FileTextIcon className="w-4 h-4 text-[#6B7280] group-hover:text-[#0A0A0A] shrink-0 mt-0.5" />
                           <div>
                             <div className="text-xs font-mono font-medium text-[#0A0A0A]">
                               {doc.name}
@@ -458,13 +553,13 @@ export default function App() {
                 {/* Selected Document Chip */}
                 {selectedDoc && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono text-[#0A0A0A]">
-                    <FileText className="w-3.5 h-3.5 text-[#6B7280]" />
+                    <FileTextIcon className="w-3.5 h-3.5 text-[#6B7280]" />
                     <span>{selectedDoc.name}</span>
                     <button
                       onClick={() => setSelectedDoc(null)}
                       className="text-[#6B7280] hover:text-[#0A0A0A] cursor-pointer ml-1"
                     >
-                      <X className="w-3 h-3" />
+                      <XIcon className="w-3 h-3" />
                     </button>
                   </div>
                 )}
@@ -476,7 +571,7 @@ export default function App() {
                     className="p-2 text-[#6B7280] hover:text-[#0A0A0A] rounded-lg hover:bg-[#FAFAFA] transition-colors cursor-pointer shrink-0"
                     title="Attach Document"
                   >
-                    <Paperclip className="w-4 h-4" />
+                    <PaperclipIcon className="w-4 h-4" />
                   </button>
 
                   <textarea
@@ -499,7 +594,7 @@ export default function App() {
                     disabled={(!inputText.trim() && !selectedDoc) || isLoading}
                     className="p-2 rounded-xl bg-[#0A0A0A] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#262626] transition-colors cursor-pointer shrink-0"
                   >
-                    <ArrowUp className="w-4 h-4" />
+                    <ArrowUpIcon className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -673,11 +768,11 @@ function ToolEventCard({
       <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2.5">
         <div className="flex items-center gap-2">
           {isBlock ? (
-            <AlertOctagon className="w-4 h-4 text-[#DC2626]" />
+            <AlertOctagonIcon className="w-4 h-4 text-[#DC2626]" />
           ) : isAllow ? (
-            <Wrench className="w-4 h-4 text-[#2563EB]" />
+            <WrenchIcon className="w-4 h-4 text-[#2563EB]" />
           ) : (
-            <Lock className="w-4 h-4 text-[#D97706]" />
+            <LockIcon className="w-4 h-4 text-[#D97706]" />
           )}
           <span className="font-mono text-xs font-semibold text-[#0A0A0A]">
             {toolRequest.tool_name}
@@ -760,7 +855,7 @@ function ToolEventCard({
       {isAllow && toolRequest.execution_result && (
         <div className="p-3 rounded-lg border border-[#E5E5E5] bg-[#FAFAFA] text-xs font-mono space-y-1.5">
           <div className="flex items-center gap-1.5 text-[#2563EB] font-semibold text-[11px]">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+            <CheckCircle2Icon className="w-3.5 h-3.5" />
             <span>ALLOWED — TOOL EXECUTED</span>
           </div>
           <div className="text-[#0A0A0A] font-sans text-xs">
@@ -783,7 +878,7 @@ function ToolEventCard({
       {isBlock && (
         <div className="p-3 rounded-lg border border-[#DC2626]/30 bg-[#DC2626]/5 text-xs space-y-1">
           <div className="flex items-center gap-1.5 text-[#DC2626] font-semibold text-[11px] font-mono">
-            <AlertOctagon className="w-3.5 h-3.5" />
+            <AlertOctagonIcon className="w-3.5 h-3.5" />
             <span>EXECUTION PREVENTED — PRIVILEGED ACTION BLOCKED</span>
           </div>
           <p className="text-[#0A0A0A] text-xs leading-relaxed">{toolRequest.reason}</p>

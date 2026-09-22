@@ -121,6 +121,9 @@ export async function firewallMiddleware(
   // e. Record full decision object into the in-memory store
   addToolRequest(record);
 
+  // Sync to core AgentShield backend so main dashboard updates live
+  syncToCoreBackend(record, context);
+
   // f. Return decision object to caller
   return {
     requestId,
@@ -133,3 +136,57 @@ export async function firewallMiddleware(
     riskLevel,
   };
 }
+
+/**
+ * Non-blocking fire-and-forget sync to the core AgentShield backend (port 4000)
+ */
+export function syncToCoreBackend(
+  record: ToolRequestRecord,
+  context?: InvocationContext,
+): void {
+  const coreUrl = process.env.CORE_BACKEND_URL || "http://localhost:4000";
+  const payload = {
+    requestId: record.id,
+    eventType: record.decision,
+    toolName: record.tool_name,
+    args: record.arguments,
+    provenance: [
+      {
+        source:
+          context?.documentName ||
+          (record.source_type === "PDF" ? "uploaded_document.pdf" : "user_chat"),
+        trust: record.trust_level,
+        type: record.source_type,
+      },
+    ],
+    taint: {
+      tainted: record.tainted,
+      matchedSources: record.tainted
+        ? [context?.documentName || "uploaded_document.pdf"]
+        : [],
+      matchedTerms: record.tainted ? ["indirect_prompt_injection"] : [],
+    },
+    risk: {
+      risk: record.risk_level,
+      known: true,
+    },
+    matchedRule:
+      record.decision === "BLOCK"
+        ? "Prompt Injection Defense (Blocked Tainted High-Risk Tool)"
+        : record.decision === "CONFIRM"
+        ? "Human Confirmation Required (High-Risk Action)"
+        : "Standard Safe Execution (Low-Risk Tool)",
+    reasoning: record.reason,
+    userAuthorized: record.decision === "ALLOW" && record.trust_level === "TRUSTED",
+    timestamp: record.created_at,
+  };
+
+  fetch(`${coreUrl}/api/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch(() => {
+    // Non-blocking fail-safe: main backend might be temporarily offline
+  });
+}
+

@@ -19,7 +19,7 @@ export default function OverviewPage() {
       try {
         const [pendingData, eventsData] = await Promise.all([
           fetchPendingApprovals().catch(() => []),
-          fetchSecurityEvents(20).catch(() => []),
+          fetchSecurityEvents(100).catch(() => []),
         ]);
         if (mounted) {
           setPending(pendingData);
@@ -31,7 +31,7 @@ export default function OverviewPage() {
     }
 
     loadData();
-    const interval = setInterval(loadData, 4000);
+    const interval = setInterval(loadData, 2000);
     return () => {
       mounted = false;
       clearInterval(interval);

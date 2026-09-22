@@ -160,6 +160,21 @@ app.post("/api/chat/approve/:requestId", async (req: Request, res: Response) => 
       created_at: new Date().toISOString(),
     });
 
+    // Sync approval to core backend
+    const coreUrl = process.env.CORE_BACKEND_URL || "http://localhost:4000";
+    fetch(`${coreUrl}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestId,
+        eventType: "APPROVED",
+        toolName: record.tool_name,
+        args: record.arguments,
+        reasoning: `Approved by operator: ${record.tool_name}`,
+        userAuthorized: true,
+      }),
+    }).catch(() => {});
+
     const messages = getChatMessages();
     res.json({
       success: true,
@@ -194,6 +209,21 @@ app.post("/api/chat/deny/:requestId", (req: Request, res: Response) => {
     created_at: new Date().toISOString(),
   });
 
+  // Sync denial to core backend
+  const coreUrl = process.env.CORE_BACKEND_URL || "http://localhost:4000";
+  fetch(`${coreUrl}/api/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requestId,
+      eventType: "DENIED",
+      toolName: record.tool_name,
+      args: record.arguments,
+      reasoning: `Denied by operator: ${record.tool_name}`,
+      userAuthorized: false,
+    }),
+  }).catch(() => {});
+
   const messages = getChatMessages();
   res.json({
     success: true,
@@ -212,6 +242,43 @@ app.get("/api/dashboard", (_req: Request, res: Response) => {
     recentEvents: getSecurityEvents(20),
   });
 });
+
+/**
+ * Sync all existing in-memory requests to the core backend
+ */
+export function syncExistingRequestsToCore(): void {
+  const requests = getRecentToolRequests(100);
+  if (requests.length === 0) return;
+  const coreUrl = process.env.CORE_BACKEND_URL || "http://localhost:4000";
+  const events = requests.map((req) => ({
+    requestId: req.id,
+    eventType: req.decision,
+    toolName: req.tool_name,
+    args: req.arguments,
+    provenance: [{ source: req.source_type, trust: req.trust_level, type: req.source_type }],
+    taint: {
+      tainted: req.tainted,
+      matchedSources: req.tainted ? ["uploaded_document.pdf"] : [],
+      matchedTerms: req.tainted ? ["indirect_prompt_injection"] : [],
+    },
+    risk: { risk: req.risk_level, known: true },
+    matchedRule:
+      req.decision === "BLOCK"
+        ? "Prompt Injection Defense (Blocked Tainted High-Risk Tool)"
+        : req.decision === "CONFIRM"
+        ? "Human Confirmation Required (High-Risk Action)"
+        : "Standard Safe Execution (Low-Risk Tool)",
+    reasoning: req.reason,
+    userAuthorized: req.decision === "ALLOW" && req.trust_level === "TRUSTED",
+    timestamp: req.created_at,
+  }));
+
+  fetch(`${coreUrl}/api/events/sync`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ events }),
+  }).catch(() => {});
+}
 
 /**
  * POST /api/chat/reset or POST /api/chat/new
@@ -233,6 +300,9 @@ if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
     console.log(`[FIREWALL] Active middleware: firewallMiddleware`);
     console.log(`[STORAGE] 100% in-memory store (no database, no ORM, no external dependencies)`);
     console.log(`[GROQ] API Key: ${process.env.GROQ_API_KEY ? "Configured" : "Simulated Fallback Mode"}`);
+
+    // Initial sync
+    setTimeout(syncExistingRequestsToCore, 1000);
   });
 }
 

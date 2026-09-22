@@ -177,10 +177,10 @@ export default function OverviewPage() {
                   evt.event_type === "BLOCK"
                     ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
                     : evt.event_type === "APPROVED"
-                    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
-                    : evt.event_type === "CONFIRM"
-                    ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-                    : "text-slate-300 bg-white/[0.06] border-white/[0.1]";
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                      : evt.event_type === "CONFIRM"
+                        ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                        : "text-slate-300 bg-white/[0.06] border-white/[0.1]";
 
                 return (
                   <div key={evt.id} className="px-6 py-3.5 flex items-center justify-between gap-4 text-sm">

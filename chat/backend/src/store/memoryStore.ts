@@ -45,9 +45,32 @@ export interface SecurityEvent {
   reason: string;
 }
 
+export interface UploadedDocument {
+  id: string;
+  name: string;
+  size: string;
+  buffer: Buffer;
+  extractedText?: string;
+  created_at: string;
+}
+
 // Module-level in-memory state
 let toolRequests: ToolRequestRecord[] = [];
 let chatMessages: ChatMessage[] = [];
+const uploadedDocuments = new Map<string, UploadedDocument>();
+
+export function saveUploadedDocument(doc: UploadedDocument): UploadedDocument {
+  uploadedDocuments.set(doc.id, doc);
+  return doc;
+}
+
+export function getUploadedDocument(id: string): UploadedDocument | undefined {
+  return uploadedDocuments.get(id);
+}
+
+export function getAllUploadedDocuments(): UploadedDocument[] {
+  return Array.from(uploadedDocuments.values());
+}
 
 export function addToolRequest(record: ToolRequestRecord): ToolRequestRecord {
   toolRequests.push(record);
@@ -105,4 +128,5 @@ export function getSecurityEvents(limit = 20): SecurityEvent[] {
 export function resetStore(): void {
   toolRequests = [];
   chatMessages = [];
+  uploadedDocuments.clear();
 }

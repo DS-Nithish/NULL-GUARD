@@ -119,23 +119,41 @@ export async function runAgentLoop(input: RunAgentInput): Promise<AgentRunResult
 
   // Preprocessing: extract document text if attached
   if (documentIsAttached) {
-    let filePath = input.documentPath;
-    if (!filePath && input.documentId) {
-      if (input.documentId.includes("injected")) {
-        filePath = path.resolve(__dirname, "../../fixtures/injected-document.pdf");
-        documentName = "injected-document.pdf";
-      } else {
-        filePath = path.resolve(__dirname, "../../fixtures/clean-document.pdf");
-        documentName = "clean-document.pdf";
+    // 1. Check if it is an uploaded custom document
+    const uploaded = input.documentId ? getUploadedDocument(input.documentId) : undefined;
+    if (uploaded) {
+      documentName = uploaded.name;
+      if (uploaded.extractedText) {
+        extractedDocText = uploaded.extractedText;
+      } else if (uploaded.buffer) {
+        try {
+          const extraction = await extractDocument(uploaded.buffer);
+          extractedDocText = extraction.text;
+        } catch (err) {
+          console.warn("[AGENT] Error extracting uploaded document:", err);
+        }
       }
-    }
+    } else {
+      // 2. Resolve from fixture path
+      let filePath = input.documentPath;
+      if (!filePath && input.documentId) {
+        const id = input.documentId.toLowerCase();
+        if (id.includes("injected")) {
+          filePath = path.resolve(__dirname, "../../fixtures/injected-document.pdf");
+          documentName = "injected-document.pdf";
+        } else {
+          filePath = path.resolve(__dirname, "../../fixtures/clean-document.pdf");
+          documentName = "clean-document.pdf";
+        }
+      }
 
-    if (filePath && fs.existsSync(filePath)) {
-      try {
-        const extraction = await extractDocument(filePath);
-        extractedDocText = extraction.text;
-      } catch (err) {
-        console.warn("[AGENT] Error extracting document:", err);
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          const extraction = await extractDocument(filePath);
+          extractedDocText = extraction.text;
+        } catch (err) {
+          console.warn("[AGENT] Error extracting document:", err);
+        }
       }
     }
   }

@@ -17,15 +17,15 @@ export interface FirewallDecision {
 /**
  * Pure deterministic firewall evaluation function.
  * Evaluates:
- * 1. TRUSTED + not tainted -> CONFIRM (still needs human approval for HIGH/CRITICAL risk tools)
- * 2. UNTRUSTED + tainted + HIGH/CRITICAL risk -> BLOCK
- * 3. UNTRUSTED + not tainted -> ALLOW
- * 4. Default -> CONFIRM
+ * 1. UNTRUSTED + tainted + HIGH/CRITICAL risk -> BLOCK
+ * 2. HIGH/CRITICAL risk (not blocked) -> CONFIRM (human approval required)
+ * 3. UNTRUSTED + not tainted + LOW risk -> ALLOW
+ * 4. Default -> ALLOW or CONFIRM per risk level
  */
 export function evaluate(input: FirewallInput): FirewallDecision {
   const { trustLevel, tainted, riskLevel } = input;
 
-  // Rule 2: Untrusted source + tainted + HIGH/CRITICAL risk -> BLOCK
+  // Rule 1: Untrusted source + tainted + HIGH/CRITICAL risk -> BLOCK
   if (trustLevel === "UNTRUSTED" && tainted && (riskLevel === "HIGH" || riskLevel === "CRITICAL")) {
     return {
       decision: "BLOCK",
@@ -34,16 +34,17 @@ export function evaluate(input: FirewallInput): FirewallDecision {
     };
   }
 
-  // Rule 1: Trusted source + untainted -> CONFIRM for sensitive actions
-  if (trustLevel === "TRUSTED" && !tainted) {
+  // Rule 2: HIGH/CRITICAL risk tools (create_database, send_email) always require human confirmation
+  if (riskLevel === "HIGH" || riskLevel === "CRITICAL") {
+    const srcDesc = trustLevel === "TRUSTED" ? "a direct user request" : "an external document";
     return {
       decision: "CONFIRM",
-      reason: `Flagged for human confirmation: tool action is requested by a TRUSTED user but carries ${riskLevel} risk.`,
+      reason: `Flagged for human confirmation: tool action is requested via ${srcDesc} and carries ${riskLevel} risk.`,
     };
   }
 
-  // Rule 3: Untrusted source + untainted -> ALLOW
-  if (trustLevel === "UNTRUSTED" && !tainted) {
+  // Rule 3: Low/Medium risk actions that are not tainted -> ALLOW
+  if (!tainted) {
     return {
       decision: "ALLOW",
       reason: "Allowed: tool arguments do not derive from untrusted content.",

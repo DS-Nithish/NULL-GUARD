@@ -1,4 +1,9 @@
+import crypto from "node:crypto";
 import { getDb } from "./index";
+
+export function generateId(prefix = "id"): string {
+  return `${prefix}_${crypto.randomUUID()}`;
+}
 
 export interface MessageWithToolRequest {
   id: string;

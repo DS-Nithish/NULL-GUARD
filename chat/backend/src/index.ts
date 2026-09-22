@@ -1,19 +1,30 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
-import crypto from "node:crypto";
 import dotenv from "dotenv";
-import { initDb } from "./db";
+import fs from "node:fs";
 import {
+  initDb,
   createConversation,
+  getConversationById,
   insertMessage,
   getMessagesByConversation,
   insertToolRequest,
-  updateToolRequest,
   getToolRequestById,
-} from "./db/repository";
+  updateToolRequest,
+  generateId,
+} from "./db";
 import { getAllDocumentsPublic, getDocumentById } from "./services/documents";
+import {
+  executeTool,
+  TOOL_RISK_MAP,
+  isApprovedRecipient,
+  getApprovedRecipients,
+  isGmailLive,
+  initGmailMcpClient,
+  logGmailAudit,
+  AUDIT_LOG_FILE,
+} from "./services/gateway";
 import { evaluate } from "./services/firewall";
-import { executeTool, TOOL_RISK_MAP } from "./services/gateway";
 import { runAgentReasoning } from "./services/agent";
 
 dotenv.config();
@@ -27,35 +38,78 @@ app.use(express.json());
 // Initialize SQLite schema
 initDb();
 
-function generateId(prefix: string): string {
-  return `${prefix}_${crypto.randomUUID()}`;
-}
+// Attempt connection to Gmail MCP if configured
+initGmailMcpClient().catch((err) => {
+  console.warn("Gmail MCP init:", err);
+});
 
 /**
  * Health check
  */
 app.get("/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok", service: "AgentShield Chat Backend" });
+  res.json({
+    status: "ok",
+    service: "AgentShield Chat Backend",
+    isLiveGmail: isGmailLive(),
+  });
+});
+
+/**
+ * GET /api/status
+ * Returns system live status, Gmail mode, and approved recipients
+ */
+app.get("/api/status", (_req: Request, res: Response) => {
+  res.json({
+    isLiveGmail: isGmailLive(),
+    approvedRecipients: getApprovedRecipients(),
+    auditLogPath: AUDIT_LOG_FILE,
+  });
+});
+
+/**
+ * GET /api/audit-log
+ * Returns entries from the dedicated Gmail audit log file
+ */
+app.get("/api/audit-log", (_req: Request, res: Response) => {
+  try {
+    if (!fs.existsSync(AUDIT_LOG_FILE)) {
+      res.json({ entries: [] });
+      return;
+    }
+    const content = fs.readFileSync(AUDIT_LOG_FILE, "utf8");
+    const lines = content.trim().split("\n").filter(Boolean);
+    const entries = lines.map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return { raw: l };
+      }
+    });
+    res.json({ entries });
+  } catch (err) {
+    console.error("Error reading audit log:", err);
+    res.status(500).json({ error: "Failed to read audit log" });
+  }
 });
 
 /**
  * POST /api/chat/new
- * Initializes a new conversation thread.
+ * Creates a new conversation session
  */
 app.post("/api/chat/new", (_req: Request, res: Response) => {
   try {
-    const id = generateId("conv");
-    const conv = createConversation(id);
-    res.json({ conversationId: conv.id });
+    const convId = generateId("conv");
+    const conversation = createConversation(convId);
+    res.json({ conversationId: conversation.id });
   } catch (err) {
     console.error("Error creating conversation:", err);
-    res.status(500).json({ error: "Failed to initialize conversation" });
+    res.status(500).json({ error: "Failed to create conversation" });
   }
 });
 
 /**
  * GET /api/documents
- * Returns the list of 3 available fake documents for the attachment dropdown.
+ * Returns public list of preset documents (zero taint/malicious flags leaked)
  */
 app.get("/api/documents", (_req: Request, res: Response) => {
   try {
@@ -63,17 +117,22 @@ app.get("/api/documents", (_req: Request, res: Response) => {
     res.json(docs);
   } catch (err) {
     console.error("Error fetching documents:", err);
-    res.status(500).json({ error: "Failed to fetch document store" });
+    res.status(500).json({ error: "Failed to retrieve documents" });
   }
 });
 
 /**
  * GET /api/chat/:conversationId/messages
- * Fetches all messages in the conversation, including inline tool request payloads.
+ * Returns full message history for rendering/polling
  */
-app.get("/api/chat/:conversationId/messages", (req: Request, res: Response) => {
+app.get("/api/chat/:conversationId/messages", (req: Request, res: Response): void => {
   try {
     const { conversationId } = req.params;
+    const conversation = getConversationById(conversationId);
+    if (!conversation) {
+      res.status(404).json({ error: `Conversation '${conversationId}' not found` });
+      return;
+    }
     const messages = getMessagesByConversation(conversationId);
     res.json(messages);
   } catch (err) {
@@ -118,8 +177,26 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
       const { toolName, arguments: toolArgs } = agentResult.proposedToolCall;
       const risk_level = TOOL_RISK_MAP[toolName] || "HIGH";
 
-      // Determine taint: true if document was attached and isMalicious
-      const tainted = Boolean(attachedDoc && attachedDoc.isMalicious);
+      // Taint Detection:
+      // Tainted if:
+      // - Attached document was flagged malicious (e.g. prompt injection payload)
+      // - For send_email: proposed recipient is an unauthorized address or doesn't match what the user requested
+      let tainted = false;
+
+      if (attachedDoc && attachedDoc.isMalicious) {
+        tainted = true;
+      } else if (toolName === "send_email") {
+        const proposedTo = String(toolArgs.to || "").toLowerCase();
+        const userMsgLower = message.toLowerCase();
+        const isRecipientInUserPrompt = proposedTo && userMsgLower.includes(proposedTo);
+        const isRecipientApproved = isApprovedRecipient(proposedTo);
+
+        if (proposedTo.includes("attacker") || (!isRecipientInUserPrompt && !isRecipientApproved)) {
+          tainted = true;
+        } else if (attachedDoc && !isRecipientApproved) {
+          tainted = true;
+        }
+      }
 
       // Evaluate through AgentShield Firewall
       const firewallDecision = evaluate({
@@ -128,12 +205,30 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
         riskLevel: risk_level,
       });
 
+      // Tailor plain-English reason for email security context
+      if (toolName === "send_email" && firewallDecision.decision === "BLOCK") {
+        firewallDecision.reason =
+          "Blocked: this email would have been sent to an unauthorized recipient based on hidden instructions found in the attached content.";
+        
+        // Log block to dedicated audit trail
+        logGmailAudit({
+          event: "BLOCKED",
+          tool: "send_email",
+          to: String(toolArgs.to || "unspecified"),
+          subject: String(toolArgs.subject || "unspecified"),
+          decision: "BLOCK",
+          reason: firewallDecision.reason,
+          details: { toolArgs, attachedDocId: attachedDoc?.id },
+        });
+      }
+
       const toolRequestId = generateId("req");
       const status = firewallDecision.decision === "CONFIRM" ? "pending" : "resolved";
 
       let executionResult = null;
+      // Gateway Execution: Invariant - ONLY called if decision is ALLOW
       if (firewallDecision.decision === "ALLOW") {
-        executionResult = executeTool(toolName, toolArgs);
+        executionResult = await executeTool(toolName, toolArgs);
       }
 
       // Record tool request in SQLite
@@ -185,7 +280,7 @@ app.post("/api/chat/message", async (req: Request, res: Response): Promise<void>
  * POST /api/chat/approve/:toolRequestId
  * Operator approves a pending CONFIRM tool call -> executes tool via Gateway.
  */
-app.post("/api/chat/approve/:toolRequestId", (req: Request, res: Response): void => {
+app.post("/api/chat/approve/:toolRequestId", async (req: Request, res: Response): Promise<void> => {
   try {
     const { toolRequestId } = req.params;
     const toolReq = getToolRequestById(toolRequestId);
@@ -205,7 +300,7 @@ app.post("/api/chat/approve/:toolRequestId", (req: Request, res: Response): void
     const args = JSON.parse(toolReq.arguments);
 
     // CRITICAL: Authorized call to Tool Gateway
-    const executionResult = executeTool(toolReq.tool_name, args);
+    const executionResult = await executeTool(toolReq.tool_name, args);
 
     // Update state to ALLOW
     updateToolRequest(toolRequestId, {
@@ -216,11 +311,16 @@ app.post("/api/chat/approve/:toolRequestId", (req: Request, res: Response): void
 
     // Append resolution message to chat thread
     const resMsgId = generateId("msg");
+    const executionMsg =
+      toolReq.tool_name === "send_email"
+        ? `Email sent to ${args.to} (Message ID: ${executionResult.output?.messageId || "delivered"})`
+        : `Tool '${toolReq.tool_name}' was approved and executed successfully via the Tool Gateway.`;
+
     insertMessage({
       id: resMsgId,
       conversation_id: toolReq.conversation_id,
       role: "agent",
-      content: `Tool '${toolReq.tool_name}' was approved and executed successfully via the Tool Gateway.`,
+      content: executionMsg,
     });
 
     const messages = getMessagesByConversation(toolReq.conversation_id);
@@ -253,6 +353,17 @@ app.post("/api/chat/deny/:toolRequestId", (req: Request, res: Response): void =>
       decision: "BLOCK",
       status: "resolved",
     });
+
+    if (toolReq.tool_name === "send_email") {
+      const args = JSON.parse(toolReq.arguments);
+      logGmailAudit({
+        event: "BLOCKED",
+        tool: "send_email",
+        to: args.to,
+        decision: "BLOCK",
+        reason: "Denied by human operator before execution",
+      });
+    }
 
     const resMsgId = generateId("msg");
     insertMessage({

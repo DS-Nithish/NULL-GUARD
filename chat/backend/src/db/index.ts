@@ -31,3 +31,5 @@ export function resetDb(): void {
   const db = getDb();
   db.exec("DELETE FROM messages; DELETE FROM tool_requests; DELETE FROM conversations;");
 }
+
+export * from "./repository";
